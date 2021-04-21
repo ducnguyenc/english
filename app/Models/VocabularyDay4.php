@@ -13,7 +13,7 @@ class VocabularyDay4 extends Model
         'spell',
         'vietnamese',
     ];
-    protected $cats = [
+    protected $casts = [
         'english' => 'string',
         'spell' => 'array',
         'vietnamese' => 'string',

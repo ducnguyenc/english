@@ -130,7 +130,6 @@
                         idVocabulary.push($(this).attr('data-id'));
                     }
                 });
-                console.log(idVocabulary);
                 $.ajax({
                     type: "POST",
                     url: 'vocabulary/forward',

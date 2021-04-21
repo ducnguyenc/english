@@ -14,7 +14,6 @@ class VocabularyService implements VocabularyInterface
 {
     public function index()
     {
-
     }
 
     public function create(array $params)
@@ -32,11 +31,13 @@ class VocabularyService implements VocabularyInterface
         ];
         try {
             DB::beginTransaction();
-            VocabularyDay1::firstOrCreate(['english' => $params['english']],
+            VocabularyDay1::firstOrCreate(
+                ['english' => $params['english']],
                 [
                     'vietnamese' => $params['vietnamese'],
                     'spell' => $spell,
-                ]);
+                ]
+            );
             DB::commit();
         } catch (\Exception $exception) {
             DB::rollBack();
@@ -55,9 +56,13 @@ class VocabularyService implements VocabularyInterface
         ];
         $day = $params['day'];
         $idVocabulary = $params['idVocabulary'];
-        $models[$day + 1]->insert(
-            $models[$day]->whereIn('id', $idVocabulary)->get(['english', 'spell', 'vietnamese'])->toArray()
-        );
+
+        foreach ($models[$day]->whereIn('id', $idVocabulary)->get(['english', 'spell', 'vietnamese'])->toArray() as $vocabulary) {
+            $models[$day + 1]->create($vocabulary);
+        }
+        // $models[$day + 1]->insert(
+        //     $models[$day]->whereIn('id', $idVocabulary)->get(['english', 'spell', 'vietnamese'])->toArray()
+        // );
     }
 
     public function delete(array $params)
@@ -93,9 +98,10 @@ class VocabularyService implements VocabularyInterface
                 'https://dictionary.cambridge.org/dictionary/english/' . $word['english']
             );
             $url = 'https://dictionary.cambridge.org' . $crawler->filter('.us.dpron-i source')->first()->attr('src');
-            file_put_contents('C:\Users\ducnc\Desktop\New folder\MergeSound.mp3',
+            file_put_contents(
+                'C:\Users\ducnc\Desktop\New folder\MergeSound.mp3',
                 file_get_contents('C:\Users\ducnc\Desktop\New folder\MergeSound.mp3') .
-                file_get_contents($url)
+                    file_get_contents($url)
             );
         }
     }
