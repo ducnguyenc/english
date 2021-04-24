@@ -18,19 +18,22 @@ class VocabularyService implements VocabularyInterface
 
     public function create(array $params)
     {
-        try {
-            DB::beginTransaction();
-            $client = new Client();
-            $crawler = $client->request(
-                'GET',
-                'https://dictionary.cambridge.org/dictionary/english/' . $params['english']
-            );
-            $spellUK = $crawler->filter('.uk.dpron-i span.ipa')->first()->text();
-            $spellUS = $crawler->filter('.us.dpron-i span.ipa')->first()->text();
+        $client = new Client();
+        $crawler = $client->request(
+            'GET',
+            'https://dictionary.cambridge.org/dictionary/english/' . $params['english']
+        );
+        $spell = [];
+        if ($crawler->filter('.uk.dpron-i span.ipa')->first()->getNode(0)) {
+            $spellUK = $crawler->filter('.uk.dpron-i span.ipa')->first()->text() ?? null;
+            $spellUS = $crawler->filter('.us.dpron-i span.ipa')->first()->text() ?? null;
             $spell = [
                 'us' => '/' . $spellUS . '/',
                 'uk' => '/' . $spellUK . '/',
             ];
+        }
+        try {
+            DB::beginTransaction();
             VocabularyDay1::firstOrCreate(
                 ['english' => $params['english']],
                 [
@@ -101,7 +104,7 @@ class VocabularyService implements VocabularyInterface
             file_put_contents(
                 'C:\Users\ducnc\Desktop\New folder\MergeSound.mp3',
                 file_get_contents('C:\Users\ducnc\Desktop\New folder\MergeSound.mp3') .
-                file_get_contents($url)
+                    file_get_contents($url)
             );
         }
     }
