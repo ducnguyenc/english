@@ -18,27 +18,28 @@ class VocabularyService implements VocabularyInterface
 
     public function create(array $params)
     {
-        $client = new Client();
-        $crawler = $client->request(
-            'GET',
-            'https://dictionary.cambridge.org/dictionary/english/' . $params['english']
-        );
-        $spell = [];
-        if ($crawler->filter('.uk.dpron-i span.ipa')->first()->getNode(0)) {
-            $spellUK = $crawler->filter('.uk.dpron-i span.ipa')->first()->text() ?? null;
-            $spellUS = $crawler->filter('.us.dpron-i span.ipa')->first()->text() ?? null;
-            $spell = [
-                'us' => '/' . $spellUS . '/',
-                'uk' => '/' . $spellUK . '/',
-            ];
+        $arrayEnglish = explode(' ', $params['english']);
+        $spellUS = $spellUK = '';
+        foreach ($arrayEnglish as $english) {
+            $client = new Client();
+            $crawler = $client->request(
+                'GET',
+                'https://dictionary.cambridge.org/dictionary/english/' . $english
+            );
+            $spellUS = $spellUS . ' /' . $crawler->filter('.us.dpron-i span.ipa')->first()->text() . '/' ?? null;
+            $spellUK = $spellUK . ' /' . $crawler->filter('.uk.dpron-i span.ipa')->first()->text() . '/' ?? null;
         }
+        $spell = [
+            'us' => trim($spellUS),
+            'uk' => trim($spellUK),
+        ];
         try {
             DB::beginTransaction();
             VocabularyDay1::firstOrCreate(
                 ['english' => $params['english']],
                 [
-                    'vietnamese' => $params['vietnamese'],
                     'spell' => $spell,
+                    'vietnamese' => $params['vietnamese'],
                 ]
             );
             DB::commit();
