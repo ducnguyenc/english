@@ -98,7 +98,7 @@ class VocabularyService implements VocabularyInterface
         $client = new Client();
         $words = $models[$id]->get()->toArray();
         foreach ($words as $word) {
-            if (substr_count($word, ' ')) {
+            if (!substr_count($word['english'], ' ')) {
                 $crawler = $client->request(
                     'GET',
                     'https://dictionary.cambridge.org/dictionary/english/' . $word['english']
