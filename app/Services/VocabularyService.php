@@ -94,20 +94,22 @@ class VocabularyService implements VocabularyInterface
             '4' => VocabularyDay4::query(),
             '5' => VocabularyDay5::query(),
         ];
-            fopen(__DIR__ . '/../../storage/app/MergeSound.mp3', "w+");
+        fopen(__DIR__ . '/../../storage/app/MergeSound.mp3', "w+");
         $client = new Client();
         $words = $models[$id]->get()->toArray();
         foreach ($words as $word) {
-            $crawler = $client->request(
-                'GET',
-                'https://dictionary.cambridge.org/dictionary/english/' . $word['english']
-            );
-            $url = 'https://dictionary.cambridge.org' . $crawler->filter('.us.dpron-i source')->first()->attr('src');
-            file_put_contents(
-                __DIR__ . '/../../storage/app/MergeSound.mp3',
-                file_get_contents(__DIR__ . '/../../storage/app/MergeSound.mp3') .
-                file_get_contents($url)
-            );
+            if (substr_count($word, ' ')) {
+                $crawler = $client->request(
+                    'GET',
+                    'https://dictionary.cambridge.org/dictionary/english/' . $word['english']
+                );
+                $url = 'https://dictionary.cambridge.org' . $crawler->filter('.us.dpron-i source')->first()->attr('src');
+                file_put_contents(
+                    __DIR__ . '/../../storage/app/MergeSound.mp3',
+                    file_get_contents(__DIR__ . '/../../storage/app/MergeSound.mp3') .
+                    file_get_contents($url)
+                );
+            }
         }
     }
 }
