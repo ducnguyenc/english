@@ -20,4 +20,4 @@ Route::get('/', function () {
 
 Route::resource('vocabulary', VocabularyController::class);
 Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-Route::post('vocabulary/mergesound', [VocabularyController::class, 'mergeSound'])->name('vocabulary.mergesound');
+Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])->name('vocabulary.mergesound');

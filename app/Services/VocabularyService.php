@@ -9,6 +9,7 @@ use App\Models\VocabularyDay4;
 use App\Models\VocabularyDay5;
 use Illuminate\Support\Facades\DB;
 use Goutte\Client;
+use function Couchbase\defaultDecoder;
 
 class VocabularyService implements VocabularyInterface
 {
@@ -84,7 +85,7 @@ class VocabularyService implements VocabularyInterface
         $models[$day]->whereIn('id', $idVocabulary)->delete();
     }
 
-    public function mergeSound(array $params)
+    public function mergeSound($id)
     {
         $models = [
             '1' => VocabularyDay1::query(),
@@ -93,9 +94,9 @@ class VocabularyService implements VocabularyInterface
             '4' => VocabularyDay4::query(),
             '5' => VocabularyDay5::query(),
         ];
-        fopen("C:\Users\ducnc\Desktop\New folder\MergeSound.mp3", "w");
+            fopen(__DIR__ . '/../../storage/app/MergeSound.mp3', "w+");
         $client = new Client();
-        $words = $models[$params['day']]->get()->toArray();
+        $words = $models[$id]->get()->toArray();
         foreach ($words as $word) {
             $crawler = $client->request(
                 'GET',
@@ -103,9 +104,9 @@ class VocabularyService implements VocabularyInterface
             );
             $url = 'https://dictionary.cambridge.org' . $crawler->filter('.us.dpron-i source')->first()->attr('src');
             file_put_contents(
-                'C:\Users\ducnc\Desktop\New folder\MergeSound.mp3',
-                file_get_contents('C:\Users\ducnc\Desktop\New folder\MergeSound.mp3') .
-                    file_get_contents($url)
+                __DIR__ . '/../../storage/app/MergeSound.mp3',
+                file_get_contents(__DIR__ . '/../../storage/app/MergeSound.mp3') .
+                file_get_contents($url)
             );
         }
     }

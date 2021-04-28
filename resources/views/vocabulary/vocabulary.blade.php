@@ -59,7 +59,6 @@
                                 </div>
                             </div>
                             <button class="btn" type="submit">Create</button>
-                            <button class="btn mergesound{{$day}}" type="button">Merge Sound</button>
                         </form>
                     @endif
                     <table class="table table-bordered mt-1">
@@ -106,7 +105,8 @@
                         </tbody>
                     </table>
                     <button class="btn submit{{ $day }}" type="button">Submit</button>
-                    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
+                    <a href="{{ route('vocabulary.mergesound', $day) }}" class="btn" type="button">Merge Sound</a>
+                        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
                     3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt
                     laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin
                     coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes
