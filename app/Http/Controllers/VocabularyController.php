@@ -30,8 +30,9 @@ class VocabularyController extends Controller
     public function index()
     {
         $days = [1, 2, 3, 4, 5];
-        $vocabularyDays = ['1' => VocabularyDay1::all()->random(), '2' => VocabularyDay2::all()->random(),
-            '3' => VocabularyDay3::all()->random(), '4' => VocabularyDay4::all()->random(), '5' => VocabularyDay5::all()->random()];
+        $vocabularyDays = ['1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
+            '3' => VocabularyDay3::all()->shuffle(), '4' => VocabularyDay4::all()->shuffle(),
+            '5' => VocabularyDay5::all()->shuffle()];
         return view('vocabulary.vocabulary', compact('days', 'vocabularyDays'));
     }
 
