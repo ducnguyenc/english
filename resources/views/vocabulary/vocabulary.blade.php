@@ -89,15 +89,44 @@
                                     </div>
                                 </td>
                                 <td>
+                                    <button type="submit" class=""></button>
                                     <button id="{{ $vocabulary->id }}" class="btn showVocabulary"
                                             data-toggle="collapse" data-target="#vocabulary{{ $vocabulary->id }}"
                                             aria-expanded="false"
                                             aria-controls="vocabulary{{ $vocabulary->id }}">
                                         Show
                                     </button>
-                                    <button class="btn btn-danger deleteVocabulary{{ $day }}" type="button"
-                                            data-id="{{ $vocabulary->id }}">Delete
+                                    <button class="btn btn-danger" type="button" data-toggle="modal"
+                                            data-target="#exampleModal{{ $vocabulary->id }}">
+                                        Delete
                                     </button>
+                                    <div class="modal fade" id="exampleModal{{ $vocabulary->id }}" tabindex="-1"
+                                         role="dialog"
+                                         aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="exampleModalLabel">Delete</h5>
+                                                    <button type="button" class="close" data-dismiss="modal"
+                                                            aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you delete sure?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary"
+                                                            data-dismiss="modal">Cancel
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-danger deleteVocabulary{{ $day }}"
+                                                            data-id="{{ $vocabulary->id }}">Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -106,7 +135,7 @@
                     </table>
                     <button class="btn submit{{ $day }}" type="button">Submit</button>
                     <a href="{{ route('vocabulary.mergesound', $day) }}" class="btn" type="button">Merge Sound</a>
-                        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
+                    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
                     3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt
                     laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin
                     coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes
