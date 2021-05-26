@@ -125,7 +125,7 @@
         $.each(day, function (key, value) {
             $('.submit' + value).click(function () {
                 var idVocabulary = [];
-                $('.vocabularyVietNamese1').each(function () {
+                $('.vocabularyVietNamese' + value).each(function () {
                     if ($(this).is(':visible')) {
                         idVocabulary.push($(this).attr('data-id'));
                     }
