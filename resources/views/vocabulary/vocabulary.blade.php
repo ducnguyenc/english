@@ -89,7 +89,6 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <button type="submit" class=""></button>
                                     <button id="{{ $vocabulary->id }}" class="btn showVocabulary"
                                             data-toggle="collapse" data-target="#vocabulary{{ $vocabulary->id }}"
                                             aria-expanded="false"
