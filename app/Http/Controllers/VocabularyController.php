@@ -130,8 +130,11 @@ class VocabularyController extends Controller
         return redirect(route('vocabulary.index'));
     }
 
-    public function mergeSound($id){
-        $this->vocabularyInterface->mergeSound($id);
-        return response()->download(realpath(__DIR__.'/../../../storage/app/MergeSound.mp3'));
+    public function mergeSound($id)
+    {
+        if ($id <= 5) {
+            $this->vocabularyInterface->mergeSound($id);
+            return response()->download(realpath(__DIR__ . '/../../../storage/app/MergeSound.mp3'));
+        }
     }
 }

@@ -20,4 +20,10 @@ Route::get('/', function () {
 
 Route::resource('vocabulary', VocabularyController::class);
 Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])->name('vocabulary.mergesound');
+Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
+    ->name('vocabulary.mergesound')->whereNumber('day');
+Route::domain('{abc}.ab')->group(function () {
+    Route::get('a', function () {
+        dd(1);
+    });
+});
