@@ -18,12 +18,17 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::resource('vocabulary', VocabularyController::class);
-Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
-    ->name('vocabulary.mergesound')->whereNumber('day');
-Route::domain('{abc}.ab')->group(function () {
-    Route::get('a', function () {
-        dd(1);
+Route::middleware('throttle:vocabulary')->group(function () {
+    Route::prefix('english')->group(function () {
+        Route::name('english.')->group(function () {
+            Route::resource('vocabulary', VocabularyController::class);
+            Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
+            Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
+                ->name('vocabulary.mergesound')->whereNumber('day');
+        });
     });
+});
+
+Route::fallback(function () {
+    return redirect()->route('english.vocabulary.index');
 });

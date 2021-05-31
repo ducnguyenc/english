@@ -8,10 +8,8 @@ use App\Models\VocabularyDay3;
 use App\Models\VocabularyDay4;
 use App\Models\VocabularyDay5;
 use App\Services\VocabularyInterface;
-use http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class VocabularyController extends Controller
 {
@@ -55,7 +53,7 @@ class VocabularyController extends Controller
     public function store(Request $request)
     {
         $this->vocabularyInterface->create($request->all());
-        return redirect(route('vocabulary.index'));
+        return redirect(route('english.vocabulary.index'));
     }
 
     /**
@@ -127,7 +125,7 @@ class VocabularyController extends Controller
             DB::rollBack();
             return $exception->getMessage();
         }
-        return redirect(route('vocabulary.index'));
+        return redirect(route('english.vocabulary.index'));
     }
 
     public function mergeSound($id)

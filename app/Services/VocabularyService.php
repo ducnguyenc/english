@@ -9,7 +9,6 @@ use App\Models\VocabularyDay4;
 use App\Models\VocabularyDay5;
 use Illuminate\Support\Facades\DB;
 use Goutte\Client;
-use function Couchbase\defaultDecoder;
 
 class VocabularyService implements VocabularyInterface
 {

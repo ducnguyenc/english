@@ -42,7 +42,7 @@
                  data-parent="#accordion">
                 <div class="card-body">
                     @if($day == 1)
-                        <form action="{{ route('vocabulary.store') }}" method="post">
+                        <form action="{{ route('english.vocabulary.store') }}" method="post">
                             @csrf
                             <div class="form-group row">
                                 <label for="english" class="col-sm-2 col-form-label">English</label>
@@ -133,7 +133,7 @@
                         </tbody>
                     </table>
                     <button class="btn submit{{ $day }}" type="button">Submit</button>
-                    <a href="{{ route('vocabulary.mergesound', $day) }}" class="btn" type="button">Merge Sound</a>
+                    <a href="{{ route('english.vocabulary.mergesound', $day) }}" class="btn" type="button">Merge Sound</a>
                     Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
                     3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt
                     laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin
