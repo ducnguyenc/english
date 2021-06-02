@@ -27,7 +27,7 @@ class VocabularyController extends Controller
      */
     public function index(Request $request)
     {
-        dd($request->ip());
+        dd($request->server);
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = ['1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
             '3' => VocabularyDay3::all()->shuffle(), '4' => VocabularyDay4::all()->shuffle(),
