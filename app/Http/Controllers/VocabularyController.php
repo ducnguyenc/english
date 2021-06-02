@@ -25,8 +25,9 @@ class VocabularyController extends Controller
      *
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
+        dd($request->ip());
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = ['1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
             '3' => VocabularyDay3::all()->shuffle(), '4' => VocabularyDay4::all()->shuffle(),
@@ -135,4 +136,6 @@ class VocabularyController extends Controller
             return response()->download(realpath(__DIR__ . '/../../../storage/app/MergeSound.mp3'));
         }
     }
+
+
 }
