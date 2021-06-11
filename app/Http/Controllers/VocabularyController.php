@@ -23,15 +23,16 @@ class VocabularyController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
-    public function index(Request $request)
+    public function index()
     {
-        dd($request->server);
         $days = [1, 2, 3, 4, 5];
-        $vocabularyDays = ['1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
+        $vocabularyDays = [
+            '1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
             '3' => VocabularyDay3::all()->shuffle(), '4' => VocabularyDay4::all()->shuffle(),
-            '5' => VocabularyDay5::all()->shuffle()];
+            '5' => VocabularyDay5::all()->shuffle()
+        ];
         return view('vocabulary.vocabulary', compact('days', 'vocabularyDays'));
     }
 
@@ -49,7 +50,7 @@ class VocabularyController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Routing\Redirector
+     * @return \Illuminate\Routing\Redirector
      */
     public function store(Request $request)
     {
@@ -136,6 +137,4 @@ class VocabularyController extends Controller
             return response()->download(realpath(__DIR__ . '/../../../storage/app/MergeSound.mp3'));
         }
     }
-
-
 }

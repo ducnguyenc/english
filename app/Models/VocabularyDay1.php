@@ -20,4 +20,9 @@ class VocabularyDay1 extends Model
         'spell' => 'array',
         'vietnamese' => 'string',
     ];
+
+    public function vocabulary2()
+    {
+        return $this->hasMany(VocabularyDay2::class, 'english', 'english');
+    }
 }

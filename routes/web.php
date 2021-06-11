@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\VocabularyController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,8 @@ Route::middleware('throttle:vocabulary')->group(function () {
         });
     });
 });
+
+Route::resource('general', GeneralController::class);
 
 Route::fallback(function () {
     return redirect()->route('english.vocabulary.index');
