@@ -15,7 +15,8 @@ class CreateGeneralsTable extends Migration
     {
         Schema::create('generals', function (Blueprint $table) {
             $table->id();
-            $table->string('donotknow');
+            $table->string('title');
+            $table->string('content');
             $table->timestamps();
         });
     }

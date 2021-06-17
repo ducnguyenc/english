@@ -18,7 +18,8 @@
             @csrf
             <div class="form-group">
                 <label>Input</label>
-                <input type="input" class="form-control" name="input" placeholder="Input">
+                <input type="input" class="form-control" name="title" placeholder="Title">
+                <input type="input" class="form-control" name="content" placeholder="Content">
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
@@ -28,13 +29,21 @@
                 <tr>
                     <th scope="col">#</th>
                     <th scope="col">DO NOT KNOW</th>
+                    <th scope="col">ACTION</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($generals as $index => $general)
                     <tr>
                         <th scope="row">{{ $index + 1 }}</th>
-                        <td>{{ $general->donotknow }}</td>
+                        <td>{{ $general->title }} <code>{{ $general->content }}</code></td>
+                        <td>
+                            <form action="{{ route('general.destroy', $general->id) }}" method="POST">
+                                @method('DELETE')
+                                @csrf
+                                <button type="submit" class="btn-danger btn">DELETE</button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

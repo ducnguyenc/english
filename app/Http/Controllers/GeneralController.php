@@ -36,9 +36,7 @@ class GeneralController extends Controller
      */
     public function store(Request $request)
     {
-        General::firstOrCreate([
-            'donotknow' => $request->input,
-        ]);
+        General::firstOrCreate($request->except('_token'));
         return redirect()->route('general.index');
     }
 
@@ -84,6 +82,7 @@ class GeneralController extends Controller
      */
     public function destroy(General $general)
     {
-        //
+        $general->delete();
+        return redirect()->route('general.index');
     }
 }

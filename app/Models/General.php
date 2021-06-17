@@ -10,10 +10,12 @@ class General extends Model
     use HasFactory;
 
     protected $fillable = [
-        'donotknow',
+        'title',
+        'content'
     ];
 
     protected $casts = [
-        'donotknow' => 'string',
+        'title' => 'string',
+        'content' => 'string',
     ];
 }
