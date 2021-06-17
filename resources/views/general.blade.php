@@ -28,7 +28,8 @@
             <thead>
                 <tr>
                     <th scope="col">#</th>
-                    <th scope="col">DO NOT KNOW</th>
+                    <th scope="col">TITLE</th>
+                    <th scope="col">CONTENT</th>
                     <th scope="col">ACTION</th>
                 </tr>
             </thead>
@@ -36,7 +37,8 @@
                 @foreach ($generals as $index => $general)
                     <tr>
                         <th scope="row">{{ $index + 1 }}</th>
-                        <td>{{ $general->title }} <code>{{ $general->content }}</code></td>
+                        <td>{{ $general->title }}</td>
+                        <td><code>{{ $general->content }}</code></td>
                         <td>
                             <form action="{{ route('general.destroy', $general->id) }}" method="POST">
                                 @method('DELETE')
