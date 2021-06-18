@@ -36,6 +36,10 @@ class GeneralController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate([
+            'title' => 'bail|required|string',
+            'content' => 'bail|required|string',
+        ]);
         General::firstOrCreate($request->except('_token'));
         return redirect()->route('general.index');
     }

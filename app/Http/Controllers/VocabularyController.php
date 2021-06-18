@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\VocaburalyRequest;
 use App\Models\VocabularyDay1;
 use App\Models\VocabularyDay2;
 use App\Models\VocabularyDay3;
@@ -49,10 +50,10 @@ class VocabularyController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param \App\Http\Requests\VocaburalyRequest $request
      * @return \Illuminate\Routing\Redirector
      */
-    public function store(Request $request)
+    public function store(VocaburalyRequest $request)
     {
         $this->vocabularyInterface->create($request->all());
         return redirect(route('english.vocabulary.index'));
