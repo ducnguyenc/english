@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\VocaburalyForwardRequest;
 use App\Http\Requests\VocaburalyRequest;
 use App\Models\VocabularyDay1;
 use App\Models\VocabularyDay2;
@@ -11,6 +12,7 @@ use App\Models\VocabularyDay5;
 use App\Services\VocabularyInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VocabularyController extends Controller
 {
@@ -117,7 +119,7 @@ class VocabularyController extends Controller
      *
      * @param array $vocabularyDay1
      */
-    public function forward(Request $request)
+    public function forward(VocaburalyForwardRequest $request)
     {
         try {
             DB::beginTransaction();

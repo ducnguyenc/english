@@ -4,10 +4,8 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class VocaburalyRequest extends FormRequest
+class VocaburalyForwardRequest extends FormRequest
 {
-    protected $stopOnFirstFailure = true;
-
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -26,8 +24,9 @@ class VocaburalyRequest extends FormRequest
     public function rules()
     {
         return [
-            'english' => 'bail|required|string',
-            'vietnamese' => 'bail|required|string',
+            'idVocabulary' => 'bail|required|array',
+            'idVocabulary.*' => 'bail|required|string',
+            'day' => 'bail|required|string',
         ];
     }
 }
