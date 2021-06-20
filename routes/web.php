@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\GeneralController;
-use App\Http\Controllers\VocabularyController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,19 +17,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware('throttle:vocabulary')->group(function () {
-    Route::prefix('english')->group(function () {
-        Route::name('english.')->group(function () {
-            Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
-            Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-            Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
-                ->name('vocabulary.mergesound')->whereNumber('day');
-        });
-    });
-});
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
-Route::resource('general', GeneralController::class)->except(['create', 'show', 'edit', 'update']);
-
-Route::fallback(function () {
-    return redirect()->route('english.vocabulary.index');
-});
+require __DIR__.'/auth.php';
