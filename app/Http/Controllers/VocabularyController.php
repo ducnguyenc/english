@@ -30,6 +30,7 @@ class VocabularyController extends Controller
      */
     public function index()
     {
+        Log::info("message");
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = [
             '1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
