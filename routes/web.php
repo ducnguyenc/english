@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\CheckOnlineController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\VocabularyController;
+use App\Http\Middleware\CheckOnline;
 use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,7 @@ Route::middleware('throttle:vocabulary')->group(function () {
     });
 });
 
+Route::get('admin/checkonline', [CheckOnlineController::class, 'userOnlineStatus'])->middleware('auth');
 Route::resource('general', GeneralController::class)->except(['create', 'show', 'edit', 'update']);
 
 Route::fallback(function () {
