@@ -2,11 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\VocabularyDay1;
-use App\Models\VocabularyDay2;
-use App\Models\VocabularyDay3;
-use App\Models\VocabularyDay4;
-use App\Models\VocabularyDay5;
+use App\Models\VocabularyDay;
 use Illuminate\Support\Facades\DB;
 use Goutte\Client;
 
@@ -35,11 +31,12 @@ class VocabularyService implements VocabularyInterface
         ];
         try {
             DB::beginTransaction();
-            VocabularyDay1::firstOrCreate(
+            VocabularyDay::firstOrCreate(
                 ['english' => $params['english']],
                 [
                     'spell' => $spell,
                     'vietnamese' => $params['vietnamese'],
+                    'day' => 1,
                 ]
             );
             DB::commit();
@@ -51,47 +48,30 @@ class VocabularyService implements VocabularyInterface
 
     public function forward(array $params)
     {
-        $models = [
-            '1' => VocabularyDay1::query(),
-            '2' => VocabularyDay2::query(),
-            '3' => VocabularyDay3::query(),
-            '4' => VocabularyDay4::query(),
-            '5' => VocabularyDay5::query(),
-        ];
         $day = $params['day'];
         $idVocabulary = $params['idVocabulary'];
 
-        foreach ($models[$day]->whereIn('id', $idVocabulary)->get(['english', 'spell', 'vietnamese'])->toArray() as $vocabulary) {
-            $models[$day + 1]->create($vocabulary);
+        foreach ($idVocabulary as $id) {
+            VocabularyDay::find($id)->update([
+                'day' => $day + 1,
+            ]);
         }
-        // $models[$day + 1]->insert(
-        //     $models[$day]->whereIn('id', $idVocabulary)->get(['english', 'spell', 'vietnamese'])->toArray()
-        // );
     }
 
     public function delete(array $params)
     {
-        $models = [
-            '1' => VocabularyDay1::query(),
-            '2' => VocabularyDay2::query(),
-            '3' => VocabularyDay3::query(),
-            '4' => VocabularyDay4::query(),
-            '5' => VocabularyDay5::query(),
-        ];
-        $day = $params['day'];
-        $idVocabulary = $params['idVocabulary'];
-
-        $models[$day]->whereIn('id', $idVocabulary)->delete();
+        VocabularyDay::whereIn('id', $params['idVocabulary'])->delete();
     }
 
+    /* todo
     public function mergeSound($id)
     {
         $models = [
-            '1' => VocabularyDay1::query(),
-            '2' => VocabularyDay2::query(),
-            '3' => VocabularyDay3::query(),
-            '4' => VocabularyDay4::query(),
-            '5' => VocabularyDay5::query(),
+            '1' => VocabularyDay::query()->where('day', 1),
+            '2' => VocabularyDay::query()->where('day', 2),
+            '3' => VocabularyDay::query()->where('day', 3),
+            '4' => VocabularyDay::query()->where('day', 4),
+            '5' => VocabularyDay::query()->where('day', 5),
         ];
         fopen(__DIR__ . '/../../storage/app/MergeSound.mp3', "w+");
         $client = new Client();
@@ -111,4 +91,5 @@ class VocabularyService implements VocabularyInterface
             }
         }
     }
+    */
 }

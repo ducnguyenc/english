@@ -141,8 +141,9 @@
                             </tbody>
                         </table>
                         <button class="btn submit{{ $day }}" type="button">Submit</button>
-                        <a href="{{ route('english.vocabulary.mergesound', $day) }}" class="btn" type="button">Merge
-                            Sound</a>
+{{--                        <a href="{{ route('english.vocabulary.mergesound', $day) }}" class="btn" type="button">Merge--}}
+{{--                            Sound--}}
+{{--                        </a>--}}
                         Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
                         3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt
                         laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin

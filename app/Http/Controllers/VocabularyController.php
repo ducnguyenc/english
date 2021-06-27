@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\VocaburalyForwardRequest;
 use App\Http\Requests\VocaburalyRequest;
-use App\Models\VocabularyDay1;
+use App\Models\VocabularyDay;
 use App\Models\VocabularyDay2;
 use App\Models\VocabularyDay3;
 use App\Models\VocabularyDay4;
@@ -32,9 +32,9 @@ class VocabularyController extends Controller
     {
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = [
-            '1' => VocabularyDay1::all()->shuffle(), '2' => VocabularyDay2::all()->shuffle(),
-            '3' => VocabularyDay3::all()->shuffle(), '4' => VocabularyDay4::all()->shuffle(),
-            '5' => VocabularyDay5::all()->shuffle()
+            '1' => VocabularyDay::where('day', 1)->get()->shuffle(), '2' => VocabularyDay::where('day', 2)->get()->shuffle(),
+            '3' => VocabularyDay::where('day', 3)->get()->shuffle(), '4' => VocabularyDay::where('day', 4)->get()->shuffle(),
+            '5' => VocabularyDay::where('day', 5)->get()->shuffle()
         ];
         return view('vocabulary.vocabulary', compact('days', 'vocabularyDays'));
     }
@@ -64,10 +64,10 @@ class VocabularyController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\Models\VocabularyDay1 $vocabularyDay1
+     * @param \App\Models\VocabularyDay $vocabularyDay1
      * @return \Illuminate\Http\Response
      */
-    public function show(VocabularyDay1 $vocabularyDay1)
+    public function show(VocabularyDay $vocabularyDay1)
     {
         //
     }
@@ -75,10 +75,10 @@ class VocabularyController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Models\VocabularyDay1 $vocabularyDay1
+     * @param \App\Models\VocabularyDay $vocabularyDay1
      * @return \Illuminate\Http\Response
      */
-    public function edit(VocabularyDay1 $vocabularyDay1)
+    public function edit(VocabularyDay $vocabularyDay1)
     {
         //
     }
@@ -87,10 +87,10 @@ class VocabularyController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\Models\VocabularyDay1 $vocabularyDay1
+     * @param \App\Models\VocabularyDay $vocabularyDay1
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, VocabularyDay1 $vocabularyDay1)
+    public function update(Request $request, VocabularyDay $vocabularyDay1)
     {
         //
     }
@@ -98,7 +98,7 @@ class VocabularyController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Models\VocabularyDay1 $vocabularyDay1
+     * @param \App\Models\VocabularyDay $vocabularyDay1
      * @return \Illuminate\Http\Response
      */
     public function destroy($id, Request $request)
@@ -124,7 +124,6 @@ class VocabularyController extends Controller
         try {
             DB::beginTransaction();
             $this->vocabularyInterface->forward($request->all());
-            $this->vocabularyInterface->delete($request->all());
             DB::commit();
         } catch (\Exception $exception) {
             DB::rollBack();
@@ -133,6 +132,7 @@ class VocabularyController extends Controller
         return redirect(route('english.vocabulary.index'));
     }
 
+    /* todo
     public function mergeSound($id)
     {
         if ($id <= 5) {
@@ -140,4 +140,5 @@ class VocabularyController extends Controller
             return response()->download(realpath(__DIR__ . '/../../../storage/app/MergeSound.mp3'));
         }
     }
+    */
 }

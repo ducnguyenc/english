@@ -2,17 +2,17 @@
 
 namespace Database\Factories;
 
-use App\Models\VocabularyDay5;
+use App\Models\VocabularyDay;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class VocabularyDay5Factory extends Factory
+class VocabularyDayFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = VocabularyDay5::class;
+    protected $model = VocabularyDay::class;
 
     /**
      * Define the model's default state.
@@ -22,7 +22,9 @@ class VocabularyDay5Factory extends Factory
     public function definition()
     {
         return [
-            //
+            'english' => $this->faker->name,
+            'spell' => $this->faker->name,
+            'vietnamese' => $this->faker->name,
         ];
     }
 }

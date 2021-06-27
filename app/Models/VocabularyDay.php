@@ -5,24 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class VocabularyDay1 extends Model
+class VocabularyDay extends Model
 {
     use HasFactory;
 
-    protected $table = 'vocabulary_day1s';
+    protected $table = 'vocabulary_days';
     protected $fillable = [
         'english',
         'spell',
         'vietnamese',
+        'day',
     ];
     protected $casts = [
         'english' => 'string',
         'spell' => 'array',
         'vietnamese' => 'string',
+        'day' => 'integer',
     ];
-
-    public function vocabulary2()
-    {
-        return $this->hasMany(VocabularyDay2::class, 'english', 'english');
-    }
 }
