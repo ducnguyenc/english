@@ -174,11 +174,10 @@
         $.each(day, function(key, value) {
             $('.show' + value).click(function() {
                 dataId = $(this).attr('data-id').split(',')
-                console.log(dataId[0].trim().replace(' ', ''));
                 if (dataId[1] == 1) {
-                    $('#english' + dataId[0].trim().replace(' ', '')).toggle()
+                    $('#english' + dataId[0].trim().replaceAll(' ', '')).toggle()
                 } else {
-                    $('#vietnamese' + dataId[0].trim().replace(' ', '')).toggle()
+                    $('#vietnamese' + dataId[0].trim().replaceAll(' ', '')).toggle()
                 }
             })
 
