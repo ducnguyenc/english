@@ -76,6 +76,7 @@
                                     <th scope="col">ENGLISH</th>
                                     <th scope="col">SPELL</th>
                                     <th scope="col">VIETNAMESE</th>
+                                    <th scope="col">CHECK</th>
                                     <th scope="col">ACTION</th>
                                 </tr>
                             </thead>
@@ -83,24 +84,34 @@
                                 @foreach ($vocabularyDays[$day] as $key => $vocabulary)
                                     <tr>
                                         <th scope="row" class="text-center">{{ $key + 1 }}</th>
-                                        <td>{{ $vocabulary->english }}</td>
+                                        <td>
+                                            <div id="english{{ $vocabulary->english }}"
+                                                class="toggle{{ $day }}" style=" @if ($vocabulary->status) display: none @endif"
+                                                data-id="{{ $vocabulary->id }}">
+                                                {{ $vocabulary->english }}
+                                            </div>
+                                        </td>
                                         <td>
                                             @foreach ($vocabulary->spell as $nation => $spell)
                                                 {{ $nation }}: {{ $spell }}<br>
                                             @endforeach
                                         </td>
                                         <td>
-                                            <div id="vocabulary{{ $vocabulary->id }}"
-                                                data-id="{{ $vocabulary->id }}"
-                                                class="collapse vocabularyVietNamese{{ $day }}">
+                                            <div id="vietnamese{{ $vocabulary->english }}"
+                                                class="toggle{{ $day }}" style=" @if (!$vocabulary->status) display: none @endif"
+                                                data-id="{{ $vocabulary->id }}">
                                                 {{ $vocabulary->vietnamese }}
                                             </div>
                                         </td>
                                         <td>
-                                            <button id="{{ $vocabulary->id }}" class="btn showVocabulary"
-                                                data-toggle="collapse" data-target="#vocabulary{{ $vocabulary->id }}"
-                                                aria-expanded="false"
-                                                aria-controls="vocabulary{{ $vocabulary->id }}">
+                                            <input type="text" class="form-control check{{ $day }}"
+                                                placeholder="Check"
+                                                id="check{{ $day }}id{{ $vocabulary->id }}"
+                                                data-id="@if ($vocabulary->status) {{ $vocabulary->english }}@else{{ $vocabulary->vietnamese }} @endif">
+                                        </td>
+                                        <td>
+                                            <button class="btn show{{ $day }}"
+                                                data-id="{{ $vocabulary->english }},{{ $vocabulary->status }},{{ $vocabulary->id }}">
                                                 Show
                                             </button>
                                             <button class="btn btn-danger" type="button" data-toggle="modal"
@@ -141,9 +152,9 @@
                             </tbody>
                         </table>
                         <button class="btn submit{{ $day }}" type="button">Submit</button>
-{{--                        <a href="{{ route('english.vocabulary.mergesound', $day) }}" class="btn" type="button">Merge--}}
-{{--                            Sound--}}
-{{--                        </a>--}}
+                        {{-- <a href="{{ route('english.vocabulary.mergesound', $day) }}" class="btn" type="button">Merge --}}
+                        {{-- Sound --}}
+                        {{-- </a> --}}
                         Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid.
                         3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt
                         laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin
@@ -161,13 +172,35 @@
     $(document).ready(function() {
         var day = [1, 2, 3, 4, 5]
         $.each(day, function(key, value) {
+            $('.show' + value).click(function() {
+                dataId = $(this).attr('data-id').split(',')
+                if (dataId[1] == 1) {
+                    $('#english' + dataId[0].trim()).toggle()
+                } else {
+                    $('#vietnamese' + dataId[0].trim()).toggle()
+                }
+            })
+
+            $(".check" + value).keyup(function() {
+                if ($(this).attr('data-id').trim() == $(this).val().trim()) {
+                    $(this).removeClass('text-danger is-invalid')
+                    $(this).addClass('text-primary')
+                } else {
+                    $(this).removeClass('text-primary')
+                    $(this).addClass('text-danger is-invalid')
+                }
+            });
+
             $('.submit' + value).click(function() {
                 var idVocabulary = [];
-                $('.vocabularyVietNamese' + value).each(function() {
-                    if ($(this).is(':visible')) {
+                var id;
+                $('.toggle' + value).each(function() {
+                    if ($(this).is(':visible') && $(this).attr('data-id') == id) {
                         idVocabulary.push($(this).attr('data-id'));
                     }
-                });
+                    id = $(this).attr('data-id')
+                    console.log(id, idVocabulary);
+                })
                 $.ajax({
                     type: "POST",
                     url: 'vocabulary/forward',
@@ -197,22 +230,22 @@
                 })
             });
 
-            $('.mergesound' + value).click(function() {
-                $.ajax({
-                    type: "POST",
-                    url: 'vocabulary/mergesound',
-                    data: {
-                        '_token': "{{ csrf_token() }}",
-                        'day': value,
-                    },
-                    // success: function () {
-                    //     location.reload();
-                    // }
-                })
-            });
+
+            // $('.mergesound' + value).click(function() {
+            //     $.ajax({
+            //         type: "POST",
+            //         url: 'vocabulary/mergesound',
+            //         data: {
+            //             '_token': "{{ csrf_token() }}",
+            //             'day': value,
+            //         },
+            //         // success: function () {
+            //         //     location.reload();
+            //         // }
+            //     })
+            // });
         })
     })
-
 </script>
 
 </html>

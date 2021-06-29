@@ -37,10 +37,12 @@ class VocabularyService implements VocabularyInterface
                     'spell' => $spell,
                     'vietnamese' => $params['vietnamese'],
                     'day' => 1,
+                    'status' => 0,
                 ]
             );
             DB::commit();
         } catch (\Exception $exception) {
+            dd($exception);
             DB::rollBack();
             return $exception->getMessage();
         }
@@ -54,6 +56,7 @@ class VocabularyService implements VocabularyInterface
         foreach ($idVocabulary as $id) {
             VocabularyDay::find($id)->update([
                 'day' => $day + 1,
+                'status' => rand(0,1),
             ]);
         }
     }

@@ -15,11 +15,13 @@ class VocabularyDay extends Model
         'spell',
         'vietnamese',
         'day',
+        'status',
     ];
     protected $casts = [
         'english' => 'string',
         'spell' => 'array',
         'vietnamese' => 'string',
         'day' => 'integer',
+        'status' => 'integer',
     ];
 }
