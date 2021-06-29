@@ -85,7 +85,7 @@
                                     <tr>
                                         <th scope="row" class="text-center">{{ $key + 1 }}</th>
                                         <td>
-                                            <div id="english{{ $vocabulary->english }}"
+                                            <div id="english{{ str_replace(' ', '', $vocabulary->english) }}"
                                                 class="toggle{{ $day }}" style=" @if ($vocabulary->status) display: none @endif"
                                                 data-id="{{ $vocabulary->id }}">
                                                 {{ $vocabulary->english }}
@@ -97,7 +97,7 @@
                                             @endforeach
                                         </td>
                                         <td>
-                                            <div id="vietnamese{{ $vocabulary->english }}"
+                                            <div id="vietnamese{{ str_replace(' ', '', $vocabulary->english) }}"
                                                 class="toggle{{ $day }}" style=" @if (!$vocabulary->status) display: none @endif"
                                                 data-id="{{ $vocabulary->id }}">
                                                 {{ $vocabulary->vietnamese }}
@@ -174,10 +174,11 @@
         $.each(day, function(key, value) {
             $('.show' + value).click(function() {
                 dataId = $(this).attr('data-id').split(',')
+                console.log(dataId[0].trim().replace(' ', ''));
                 if (dataId[1] == 1) {
-                    $('#english' + dataId[0].trim()).toggle()
+                    $('#english' + dataId[0].trim().replace(' ', '')).toggle()
                 } else {
-                    $('#vietnamese' + dataId[0].trim()).toggle()
+                    $('#vietnamese' + dataId[0].trim().replace(' ', '')).toggle()
                 }
             })
 
