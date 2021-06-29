@@ -182,7 +182,9 @@
             })
 
             $(".check" + value).keyup(function() {
-                if ($(this).attr('data-id').trim() == $(this).val().trim()) {
+                var vietnamese = $(this).attr('data-id').trim().split(',');
+                if (jQuery.inArray($(this).val().trim(), vietnamese) !== -1 || $(this).attr(
+                        'data-id').trim() == $(this).val().trim()) {
                     $(this).removeClass('text-danger is-invalid')
                     $(this).addClass('text-primary')
                 } else {
