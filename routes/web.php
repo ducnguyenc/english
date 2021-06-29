@@ -3,8 +3,6 @@
 use App\Http\Controllers\CheckOnlineController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\VocabularyController;
-use App\Http\Middleware\CheckOnline;
-use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Route;
 
 /*
