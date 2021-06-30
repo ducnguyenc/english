@@ -200,11 +200,12 @@
                 var idVocabulary = [];
                 var id;
                 $('.toggle' + value).each(function() {
-                    if ($(this).is(':visible') && $(this).attr('data-id') == id) {
-                        idVocabulary.push($(this).attr('data-id'));
+                    if ($(this).is(':visible')) {
+                        if ($(this).attr('data-id') == id) {
+                            idVocabulary.push($(this).attr('data-id'));
+                        }
+                        id = $(this).attr('data-id')
                     }
-                    id = $(this).attr('data-id')
-                    console.log(id, idVocabulary);
                 })
                 $.ajax({
                     type: "POST",
