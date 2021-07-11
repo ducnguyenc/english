@@ -70,17 +70,19 @@
                             <tr>
                                 <th scope="row" class="text-center">{{ $key + 1 }}</th>
                                 <td>
-                                    <div id="english{{ str_replace(' ', '', $vocabulary->english) }}" class="toggle{{ $day }}" style=" @if ($vocabulary->status) display: none @endif" data-id="{{ $vocabulary->id }}">
+                                    <div class="toggle{{ $day }} english{{ str_replace(' ', '', $vocabulary->english) }}" style="@if ($vocabulary->status) display: none @endif" data-id="{{ $vocabulary->id }}">
                                         {{ $vocabulary->english }}
                                     </div>
                                 </td>
                                 <td>
-                                    @foreach ($vocabulary->spell as $nation => $spell)
-                                    {{ $nation }}: {{ $spell }}<br>
-                                    @endforeach
+                                    <div class="toggle{{ $day }} english{{ str_replace(' ', '', $vocabulary->english) }}" style="@if ($vocabulary->status) display: none @endif" data-id="{{ $vocabulary->id }}">
+                                        @foreach ($vocabulary->spell as $nation => $spell)
+                                        {{ $nation }}: {{ $spell }}<br>
+                                        @endforeach
+                                    </div>
                                 </td>
                                 <td>
-                                    <div id="vietnamese{{ str_replace(' ', '', $vocabulary->english) }}" class="toggle{{ $day }}" style=" @if (!$vocabulary->status) display: none @endif" data-id="{{ $vocabulary->id }}">
+                                    <div id="vietnamese{{ str_replace(' ', '', $vocabulary->english) }}" class="toggle{{ $day }}" style="@if (!$vocabulary->status) display: none @endif" data-id="{{ $vocabulary->id }}">
                                         {{ $vocabulary->vietnamese }}
                                     </div>
                                 </td>
@@ -145,7 +147,7 @@
             $('.show' + value).click(function() {
                 dataId = $(this).attr('data-id').split(',')
                 if (dataId[1] == 1) {
-                    $('#english' + dataId[0].trim().replaceAll(' ', '')).toggle()
+                    $('.english' + dataId[0].trim().replaceAll(' ', '')).toggle()
                 } else {
                     $('#vietnamese' + dataId[0].trim().replaceAll(' ', '')).toggle()
                 }
