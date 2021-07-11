@@ -53,6 +53,16 @@ class VocabularyService implements VocabularyInterface
         $day = $params['day'];
         $idVocabulary = $params['idVocabulary'];
 
+        if($day == 1){
+            foreach ($idVocabulary as $id) {
+                VocabularyDay::find($id)->update([
+                    'day' => $day + 1,
+                    'status' => 1,
+                ]);
+            }
+            return;
+        }
+
         if($day == 5){
             return;
         }
