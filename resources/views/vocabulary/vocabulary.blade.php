@@ -156,9 +156,9 @@
             $(".check" + value).keyup(function() {
                 var vietnamese = $(this).attr('data-id').trim().split(',');
                 $.each(vietnamese, function(key, value) {
-                    vietnamese[key] = value.trim()
+                    vietnamese[key] = value.trim().toUpperCase()
                 });
-                if (jQuery.inArray($(this).val().trim(), vietnamese) !== -1 || $(this).attr(
+                if (jQuery.inArray($(this).val().trim().toUpperCase(), vietnamese) !== -1 || $(this).attr(
                         'data-id').trim() == $(this).val().trim()) {
                     $(this).removeClass('text-danger is-invalid')
                     $(this).addClass('text-primary')
