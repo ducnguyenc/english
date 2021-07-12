@@ -7,13 +7,7 @@ import time
 import tkinter as tk
 import numpy
 
-mydb = psycopg2.connect(
-    host="ec2-54-167-152-185.compute-1.amazonaws.com",
-    database="d4cmkjovb160kc",
-    user="xlwlxuhkkbziie",
-    password="1bfa0836d3a74c78e697087970e1416ffebaff1f43a777d99745f904f5c7736b",
-    port="5432"
-)
+
 
 mycursor = mydb.cursor()
 
