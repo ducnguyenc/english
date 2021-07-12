@@ -30,6 +30,7 @@ class VocabularyController extends Controller
      */
     public function index()
     {
+//        dd(\request()->all());
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = [
             '1' => VocabularyDay::where('day', 1)->get()->shuffle(), '2' => VocabularyDay::where('day', 2)->get()->shuffle(),
@@ -55,8 +56,10 @@ class VocabularyController extends Controller
      * @param \App\Http\Requests\VocaburalyRequest $request
      * @return \Illuminate\Routing\Redirector
      */
-    public function store(VocaburalyRequest $request)
+//    public function store(VocaburalyRequest $request)
+    public function store()
     {
+        dd(\request()->all());
         $this->vocabularyInterface->create($request->all());
         return redirect(route('english.vocabulary.index'));
     }
