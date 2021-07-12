@@ -3,7 +3,7 @@
 //use App\Http\Controllers\CheckOnlineController;
 //use App\Http\Controllers\GeneralController;
 //use App\Http\Controllers\VocabularyController;
-//use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Route;
 //
 ///*
 //|--------------------------------------------------------------------------
