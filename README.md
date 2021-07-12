@@ -1,62 +1,84 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+from re import split
+import psycopg2
+from tkinter import *
+from tkinter import simpledialog
+import random
+import time
+import tkinter as tk
+import numpy
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+mydb = psycopg2.connect(
+    host="ec2-54-167-152-185.compute-1.amazonaws.com",
+    database="d4cmkjovb160kc",
+    user="xlwlxuhkkbziie",
+    password="1bfa0836d3a74c78e697087970e1416ffebaff1f43a777d99745f904f5c7736b",
+    port="5432"
+)
 
-## About Laravel
+mycursor = mydb.cursor()
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+mycursor.execute("SELECT id FROM vocabulary_days WHERE day = 1")
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+myresult = mycursor.fetchall()
+myresults = []
+for id in myresult:
+    myresults.append(id[0])
+ids = []
+myresult = numpy.array(myresults)
+length = len(myresult)
+for i in range(0, (length // 5) - 1):
+    ids.append(myresult[i*5:(i*5 + 5)])
+    ids.append(myresult[i*5:(i*5 + 5)])
+    ids.append(myresult[i*5:(i*5 + 5)])
+    ids.append(myresult[i*5:(i*5 + 5)])
+    ids.append(myresult[i*5:(i*5 + 5)])
+ids.append(myresult[((length // 5) * 5):length])
+ids.append(myresult[((length // 5) * 5):length])
+ids.append(myresult[((length // 5) * 5):length])
+ids.append(myresult[((length // 5) * 5):length])
+ids.append(myresult[((length // 5) * 5):length])
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+myresults = myresult
+while True:
+    for myresults in ids:
+        length = len(myresults)
+        i = 0
+        myresult = myresults
+        for i in range(0, length):
+            id = random.randrange(len(myresult))
+            query = "SELECT english, spell, vietnamese FROM vocabulary_days WHERE id = " + \
+                str(myresult[id]) + "and day = 1"
 
-## Learning Laravel
+            mycursor.execute(query)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+            vocabulary = mycursor.fetchall()
+            vocabulary = {
+                'english': vocabulary[0][0],
+                'spell': vocabulary[0][1]['us'],
+                'vietnamese': vocabulary[0][2]
+            }
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+            ROOT = tk.Tk()
 
-## Laravel Sponsors
+            ROOT.withdraw()
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+            USER_INP = simpledialog.askstring(
+                title="Test", prompt=vocabulary['english'])
+            Entry(ROOT).focus()
+            vietnamese = vocabulary['vietnamese'].split(',')
+            for index, vietnam in enumerate(vietnamese):
+                vietnamese[index] = vietnam.strip()
 
-### Premium Partners
+            if USER_INP == None:
+                myresult = numpy.delete(myresult, id)
+                continue
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+            if USER_INP.strip() in vietnamese:
+                tk.messagebox.showinfo(
+                    'Đúng', vocabulary['english'] + '\n' + vocabulary['spell'] + '\n' + vocabulary['vietnamese'])
+                time.sleep(30)
+            else:
+                tk.messagebox.showerror(
+                    'Sai', vocabulary['english'] + '\n' + vocabulary['spell'] + '\n' + vocabulary['vietnamese'])
+                time.sleep(30)
+            myresult = numpy.delete(myresult, id)
