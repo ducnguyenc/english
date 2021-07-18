@@ -1,4 +1,4 @@
-`from re import split
+from re import split
 import psycopg2
 from tkinter import *
 from tkinter import simpledialog
@@ -82,4 +82,3 @@ while True:
                     'Sai', vocabulary['english'] + '\n' + vocabulary['spell'] + '\n' + vocabulary['vietnamese'])
                 time.sleep(30)
             myresult = numpy.delete(myresult, id)
-`
