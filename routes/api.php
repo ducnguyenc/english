@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
         Route::name('english.')->group(function () {
             Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
             Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
+            Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');    
         });
     });
 // });

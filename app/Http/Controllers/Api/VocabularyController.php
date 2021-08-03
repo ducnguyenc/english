@@ -133,4 +133,25 @@ class VocabularyController extends Controller
         }
         return json_encode($request->all());
     }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param \App\Models\VocabularyDay $vocabularyDay1
+     * @return \Illuminate\Http\Response
+     */
+    public function delete(Request $request)
+    {
+        foreach($request->all() as $vocabulary){
+            $vocabularys['idVocabulary'][] = $vocabulary['id'];
+        }
+
+        try {
+            DB::beginTransaction();
+            $this->vocabularyInterface->delete($vocabularys);
+            DB::commit();
+        } catch (\Exception $exception) {
+            DB::rollBack();
+        }
+    }
 }
