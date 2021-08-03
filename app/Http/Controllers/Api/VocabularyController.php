@@ -1,18 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\VocaburalyForwardRequest;
 use App\Http\Requests\VocaburalyRequest;
 use App\Models\VocabularyDay;
-use App\Models\VocabularyDay2;
-use App\Models\VocabularyDay3;
-use App\Models\VocabularyDay4;
-use App\Models\VocabularyDay5;
 use App\Services\VocabularyInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class VocabularyController extends Controller
 {
@@ -26,17 +22,18 @@ class VocabularyController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\View
+     * @return false|\Illuminate\Contracts\View\View|string
      */
     public function index()
     {
         $days = [1, 2, 3, 4, 5];
         $vocabularyDays = [
-            '1' => VocabularyDay::where('day', 1)->get()->shuffle(), '2' => VocabularyDay::where('day', 2)->get()->shuffle(),
-            '3' => VocabularyDay::where('day', 3)->get()->shuffle(), '4' => VocabularyDay::where('day', 4)->get()->shuffle(),
-            '5' => VocabularyDay::where('day', 5)->get()->shuffle()
+            '1' => json_encode(VocabularyDay::where('day', 1)->get()->shuffle()), '2' => json_encode(VocabularyDay::where('day', 2)->get()->shuffle()),
+            '3' => json_encode(VocabularyDay::where('day', 3)->get()->shuffle()), '4' => json_encode(VocabularyDay::where('day', 4)->get()->shuffle()),
+            '5' => json_encode(VocabularyDay::where('day', 5)->get()->shuffle())
         ];
-        return view('vocabulary.vocabulary', compact('days', 'vocabularyDays'));
+        // $vocabularyDay1 = VocabularyDay::where('day', 1)->get()->shuffle();
+        return response()->json($vocabularyDays);
     }
 
     /**
@@ -55,7 +52,7 @@ class VocabularyController extends Controller
      * @param \App\Http\Requests\VocaburalyRequest $request
      * @return \Illuminate\Routing\Redirector
      */
-    public function store(VocaburalyRequest $request)
+    public function store(Request $request)
     {
         $this->vocabularyInterface->create($request->all());
         return redirect(route('english.vocabulary.index'));
@@ -119,26 +116,21 @@ class VocabularyController extends Controller
      *
      * @param array $vocabularyDay1
      */
-    public function forward(VocaburalyForwardRequest $request)
+    public function forward(Request $request)
     {
+        $vocabularys['day'] = $request->all()[0]['day'];
+        foreach($request->all() as $vocabulary){
+            $vocabularys['idVocabulary'][] = $vocabulary['id'];
+        }
+        
         try {
             DB::beginTransaction();
-            $this->vocabularyInterface->forward($request->all());
+            $this->vocabularyInterface->forward($vocabularys);
             DB::commit();
         } catch (\Exception $exception) {
             DB::rollBack();
             return $exception->getMessage();
         }
-        return redirect(route('english.vocabulary.index'));
+        return json_encode($request->all());
     }
-
-    /* todo
-    public function mergeSound($id)
-    {
-        if ($id <= 5) {
-            $this->vocabularyInterface->mergeSound($id);
-            return response()->download(realpath(__DIR__ . '/../../../storage/app/MergeSound.mp3'));
-        }
-    }
-    */
 }

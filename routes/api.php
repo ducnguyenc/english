@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\VocabularyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -14,9 +15,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Route::middleware(['throttle:vocabulary'])->group(function () {
+    Route::prefix('english')->group(function () {
+        Route::name('english.')->group(function () {
+            Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
+            Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
+        });
+    });
+// });
 
-//Route::resource('vocabulary', \App\Http\Controllers\VocabularyController::class)
-//    ->only(['index', 'store', 'destroy'])->middleware('auth:api');
+Route::fallback(function () {
+    return redirect()->route('english.vocabulary.index');
+});

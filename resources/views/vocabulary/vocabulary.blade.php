@@ -179,18 +179,19 @@
                         id = $(this).attr('data-id')
                     }
                 })
-                $.ajax({
-                    type: "POST",
-                    url: 'vocabulary/forward',
-                    data: {
-                        '_token': "{{ csrf_token() }}",
-                        'idVocabulary': idVocabulary,
-                        'day': value,
-                    },
-                    success: function() {
-                        location.reload();
-                    }
-                })
+                console.log(idVocabulary);
+                // $.ajax({
+                //     type: "POST",
+                //     url: 'vocabulary/forward',
+                //     data: {
+                //         '_token': "{{ csrf_token() }}",
+                //         'idVocabulary': idVocabulary,
+                //         'day': value,
+                //     },
+                //     success: function() {
+                //         location.reload();
+                //     }
+                // })
             });
 
             $('.deleteVocabulary' + value).click(function() {
