@@ -26,16 +26,16 @@ use Illuminate\Support\Facades\Route;
 //
 //require __DIR__ . '/auth.php';
 //
-Route::middleware('throttle:vocabulary')->group(function () {
-  Route::prefix('english')->group(function () {
-      Route::name('english.')->group(function () {
-          Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
-          Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-          Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
-              ->name('vocabulary.mergesound')->whereNumber('day');
-      });
-  });
-});
+// Route::middleware('throttle:vocabulary')->group(function () {
+//   Route::prefix('english')->group(function () {
+//       Route::name('english.')->group(function () {
+//           Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
+//           Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
+//           Route::get('vocabulary/mergesound/{day}', [VocabularyController::class, 'mergeSound'])
+//               ->name('vocabulary.mergesound')->whereNumber('day');
+//       });
+//   });
+// });
 //
 //Route::get('admin/checkonline', [CheckOnlineController::class, 'userOnlineStatus'])->middleware('auth');
 //Route::resource('general', GeneralController::class)->except(['create', 'show', 'edit', 'update']);

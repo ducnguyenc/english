@@ -7,7 +7,6 @@ use App\Services\VocabularyService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 
-use Laravel\Passport\Passport;
 use function GuzzleHttp\Promise\queue;
 
 class AppServiceProvider extends ServiceProvider

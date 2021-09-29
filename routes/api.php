@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Route::middleware(['throttle:vocabulary'])->group(function () {
+// Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('english')->group(function () {
         Route::name('english.')->group(function () {
             Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);

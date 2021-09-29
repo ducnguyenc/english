@@ -32,7 +32,6 @@ class VocabularyController extends Controller
             '3' => json_encode(VocabularyDay::where('day', 3)->get()->shuffle()), '4' => json_encode(VocabularyDay::where('day', 4)->get()->shuffle()),
             '5' => json_encode(VocabularyDay::where('day', 5)->get()->shuffle())
         ];
-        // $vocabularyDay1 = VocabularyDay::where('day', 1)->get()->shuffle();
         return response()->json($vocabularyDays);
     }
 
@@ -55,7 +54,7 @@ class VocabularyController extends Controller
     public function store(Request $request)
     {
         $this->vocabularyInterface->create($request->all());
-        return redirect(route('english.vocabulary.index'));
+        return null;
     }
 
     /**
@@ -131,7 +130,7 @@ class VocabularyController extends Controller
             DB::rollBack();
             return $exception->getMessage();
         }
-        return json_encode($request->all());
+        return null;
     }
 
     /**
