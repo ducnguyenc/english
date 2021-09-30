@@ -27,10 +27,34 @@ class VocabularyController extends Controller
     public function index()
     {
         $days = [1, 2, 3, 4, 5];
+        // $vocabularyDays = [
+        //     '1' => json_encode(VocabularyDay::where('day', 1)->get()->shuffle()), '2' => json_encode(VocabularyDay::where('day', 2)->get()->shuffle()),
+        //     '3' => json_encode(VocabularyDay::where('day', 3)->get()->shuffle()), '4' => json_encode(VocabularyDay::where('day', 4)->get()->shuffle()),
+        //     '5' => json_encode(VocabularyDay::where('day', 5)->get()->shuffle())
+        // ];
+
+        $days = [1, 2, 3, 4, 5];
         $vocabularyDays = [
-            '1' => json_encode(VocabularyDay::where('day', 1)->get()->shuffle()), '2' => json_encode(VocabularyDay::where('day', 2)->get()->shuffle()),
-            '3' => json_encode(VocabularyDay::where('day', 3)->get()->shuffle()), '4' => json_encode(VocabularyDay::where('day', 4)->get()->shuffle()),
-            '5' => json_encode(VocabularyDay::where('day', 5)->get()->shuffle())
+            '1' => [
+                json_encode(VocabularyDay::where('day', 1)->where('status', 0)->get()->shuffle()),
+                json_encode(VocabularyDay::where('day', 1)->where('status', 1)->get()->shuffle()),   
+            ],
+            '2' => [
+                json_encode(VocabularyDay::where('day', 2)->where('status', 0)->get()->shuffle()),
+                json_encode(VocabularyDay::where('day', 2)->where('status', 1)->get()->shuffle()),
+            ],
+            '3' => [
+                json_encode(VocabularyDay::where('day', 3)->where('status', 0)->get()->shuffle()), 
+                json_encode(VocabularyDay::where('day', 3)->where('status', 1)->get()->shuffle()), 
+            ],
+            '4' => [
+                json_encode(VocabularyDay::where('day', 4)->where('status', 0)->get()->shuffle()),
+                json_encode(VocabularyDay::where('day', 4)->where('status', 1)->get()->shuffle()),
+            ],
+            '5' => [
+                json_encode(VocabularyDay::where('day', 5)->where('status', 0)->get()->shuffle()),
+                json_encode(VocabularyDay::where('day', 5)->where('status', 1)->get()->shuffle())
+            ],
         ];
         return response()->json($vocabularyDays);
     }
@@ -54,7 +78,6 @@ class VocabularyController extends Controller
     public function store(Request $request)
     {
         $this->vocabularyInterface->create($request->all());
-        return null;
     }
 
     /**
