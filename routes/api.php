@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\SinusController;
 use App\Http\Controllers\Api\VocabularyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +21,13 @@ use Illuminate\Support\Facades\Route;
         Route::name('english.')->group(function () {
             Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
             Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
-            Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');    
+            Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');
+        });
+    });
+
+    Route::prefix('sick')->group(function () {
+        Route::name('sick.')->group(function () {
+            Route::resource('sinus', SinusController::class)->only(['index', 'store', 'destroy']);
         });
     });
 // });
