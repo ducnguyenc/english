@@ -37,15 +37,15 @@ class VocabularyController extends Controller
         $vocabularyDays = [
             '1' => [
                 json_encode(VocabularyDay::where('day', 1)->where('status', 0)->get()->shuffle()),
-                json_encode(VocabularyDay::where('day', 1)->where('status', 1)->get()->shuffle()),   
+                json_encode(VocabularyDay::where('day', 1)->where('status', 1)->get()->shuffle()),
             ],
             '2' => [
                 json_encode(VocabularyDay::where('day', 2)->where('status', 0)->get()->shuffle()),
                 json_encode(VocabularyDay::where('day', 2)->where('status', 1)->get()->shuffle()),
             ],
             '3' => [
-                json_encode(VocabularyDay::where('day', 3)->where('status', 0)->get()->shuffle()), 
-                json_encode(VocabularyDay::where('day', 3)->where('status', 1)->get()->shuffle()), 
+                json_encode(VocabularyDay::where('day', 3)->where('status', 0)->get()->shuffle()),
+                json_encode(VocabularyDay::where('day', 3)->where('status', 1)->get()->shuffle()),
             ],
             '4' => [
                 json_encode(VocabularyDay::where('day', 4)->where('status', 0)->get()->shuffle()),
@@ -77,7 +77,9 @@ class VocabularyController extends Controller
      */
     public function store(Request $request)
     {
-        $this->vocabularyInterface->create($request->all());
+        $result = $this->vocabularyInterface->create($request->all());
+
+        return response()->json($result);
     }
 
     /**
@@ -144,7 +146,7 @@ class VocabularyController extends Controller
         foreach($request->all() as $vocabulary){
             $vocabularys['idVocabulary'][] = $vocabulary['id'];
         }
-        
+
         try {
             DB::beginTransaction();
             $this->vocabularyInterface->forward($vocabularys);

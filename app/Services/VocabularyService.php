@@ -31,21 +31,23 @@ class VocabularyService implements VocabularyInterface
         ];
         try {
             DB::beginTransaction();
-            VocabularyDay::firstOrCreate(
+            $vocabularyDay = VocabularyDay::firstOrCreate(
                 ['english' => $params['english']],
                 [
                     'spell' => $spell,
                     'vietnamese' => $params['vietnamese'],
+                    'example' => $params['example'],
                     'day' => 1,
                     'status' => 0,
                 ]
             );
             DB::commit();
         } catch (\Exception $exception) {
-            dd($exception);
             DB::rollBack();
             return $exception->getMessage();
         }
+
+        return [$vocabularyDay, $params];
     }
 
     public function forward(array $params)

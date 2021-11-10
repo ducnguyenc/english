@@ -14,6 +14,7 @@ class VocabularyDay extends Model
         'english',
         'spell',
         'vietnamese',
+        'example',
         'day',
         'status',
     ];
@@ -21,6 +22,7 @@ class VocabularyDay extends Model
         'english' => 'string',
         'spell' => 'array',
         'vietnamese' => 'string',
+        'example' => 'string',
         'day' => 'integer',
         'status' => 'integer',
     ];
