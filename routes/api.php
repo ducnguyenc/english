@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+// Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('english')->group(function () {
         Route::name('english.')->group(function () {
             Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
@@ -30,7 +30,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::resource('sinus', SinusController::class)->only(['index', 'store', 'destroy']);
         });
     });
-});
+// });
 
 Route::fallback(function () {
     return redirect()->route('english.vocabulary.index');
