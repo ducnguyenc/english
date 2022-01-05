@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Api\SinusController;
 use App\Http\Controllers\Api\VocabularyController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\FlirtController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,6 +22,21 @@ use Illuminate\Support\Facades\Route;
             Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
             Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
             Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');
+        });
+
+    });
+
+    Route::prefix('flirt')->group(function () {
+        Route::name('flirt.')->group(function () {
+            Route::resource('flirt', FlirtController::class)->only(['index', 'store', 'destroy']);
+
+            Route::get('typeIndex', [FlirtController::class, 'typeIndex']);
+            Route::post('typeStore', [FlirtController::class, 'typeStore']);
+            Route::delete('destroyType/{id}', [FlirtController::class, 'destroyType']);
+
+            Route::get('categoryIndex', [FlirtController::class, 'categoryIndex']);
+            Route::post('categoryStore', [FlirtController::class, 'categoryStore']);
+            Route::delete('destroyCategory/{id}', [FlirtController::class, 'destroyCategory']);
         });
     });
 
