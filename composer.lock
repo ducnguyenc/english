@@ -2884,6 +2884,7 @@
                 "ext-json": "*",
                 "php": "^7.2 || ^8.0",
                 "ramsey/collection": "^1.0",
+                "symfony/polyfill-ctype": "^1.8",
                 "symfony/polyfill-php80": "^1.14"
             },
             "replace": {
@@ -3356,6 +3357,7 @@
             },
             "require": {
                 "php": ">=8.0.2",
+                "symfony/polyfill-ctype": "~1.8",
                 "symfony/polyfill-mbstring": "~1.0"
             },
             "conflict": {
@@ -3964,6 +3966,7 @@
                 "symfony/error-handler": "^4.4|^5.0|^6.0",
                 "symfony/event-dispatcher": "^5.0|^6.0",
                 "symfony/http-foundation": "^5.3.7|^6.0",
+                "symfony/polyfill-ctype": "^1.8",
                 "symfony/polyfill-php73": "^1.9",
                 "symfony/polyfill-php80": "^1.16"
             },
@@ -5122,6 +5125,7 @@
             },
             "require": {
                 "php": ">=8.0.2",
+                "symfony/polyfill-ctype": "~1.8",
                 "symfony/polyfill-intl-grapheme": "~1.0",
                 "symfony/polyfill-intl-normalizer": "~1.0",
                 "symfony/polyfill-mbstring": "~1.0"
@@ -5524,6 +5528,7 @@
                 "graham-campbell/result-type": "^1.0.2",
                 "php": "^7.1.3 || ^8.0",
                 "phpoption/phpoption": "^1.8",
+                "symfony/polyfill-ctype": "^1.23",
                 "symfony/polyfill-mbstring": "^1.23.1",
                 "symfony/polyfill-php80": "^1.23.1"
             },
@@ -5674,6 +5679,7 @@
             },
             "require": {
                 "php": "^7.2 || ^8.0",
+                "symfony/polyfill-ctype": "^1.8"
             },
             "conflict": {
                 "phpstan/phpstan": "<0.12.20",
