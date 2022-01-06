@@ -2884,7 +2884,6 @@
                 "ext-json": "*",
                 "php": "^7.2 || ^8.0",
                 "ramsey/collection": "^1.0",
-                "symfony/polyfill-ctype": "^1.8",
                 "symfony/polyfill-php80": "^1.14"
             },
             "replace": {
