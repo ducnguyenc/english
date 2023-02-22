@@ -32,10 +32,10 @@ class VocabularyService implements VocabularyInterface
         try {
             DB::beginTransaction();
             $vocabularyDay = VocabularyDay::firstOrCreate(
-                ['english' => $params['english']],
+                ['english' => Str::lower($params['english'])],
                 [
                     'spell' => $spell,
-                    'vietnamese' => $params['vietnamese'],
+                    'vietnamese' => Str::lower($params['vietnamese']),
                     'example' => $params['example'],
                     'day' => 1,
                     'status' => 0,
