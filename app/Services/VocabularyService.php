@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\VocabularyDay;
 use Illuminate\Support\Facades\DB;
 use Goutte\Client;
+use Str;
 
 class VocabularyService implements VocabularyInterface
 {
