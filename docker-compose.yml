@@ -13,4 +13,4 @@ services:
     ports:
       - 3307:3306
     volumes:
-      - ../db-english:/var/lib/mysql
+      - ../SynsDatabaseDrive/db-english:/var/lib/mysql

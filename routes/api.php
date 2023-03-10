@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 // Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('english')->group(function () {
         Route::name('english.')->group(function () {
-            Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy']);
+            Route::resource('vocabulary', VocabularyController::class)->only(['index', 'store', 'destroy', 'show', 'update']);
             Route::post('vocabulary/forward', [VocabularyController::class, 'forward'])->name('vocabulary.forward');
             Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');
         });

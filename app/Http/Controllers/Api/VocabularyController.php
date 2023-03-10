@@ -83,17 +83,6 @@ class VocabularyController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @param \App\Models\VocabularyDay $vocabularyDay1
-     * @return \Illuminate\Http\Response
-     */
-    public function show(VocabularyDay $vocabularyDay1)
-    {
-        //
-    }
-
-    /**
      * Show the form for editing the specified resource.
      *
      * @param \App\Models\VocabularyDay $vocabularyDay1
@@ -111,9 +100,13 @@ class VocabularyController extends Controller
      * @param \App\Models\VocabularyDay $vocabularyDay1
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, VocabularyDay $vocabularyDay1)
+    public function update(Request $request, $id)
     {
-        //
+        VocabularyDay::where('id', $id)->update([
+            'english' => $request->english,
+            'vietnamese' => $request->vietnamese,
+            'example' => $request->example,
+        ]);
     }
 
     /**
@@ -142,6 +135,7 @@ class VocabularyController extends Controller
      */
     public function forward(Request $request)
     {
+        return $request->all();
         $vocabularys['day'] = $request->all()[0]['day'];
         foreach($request->all() as $vocabulary){
             $vocabularys['idVocabulary'][] = $vocabulary['id'];
@@ -177,5 +171,10 @@ class VocabularyController extends Controller
         } catch (\Exception $exception) {
             DB::rollBack();
         }
+    }
+
+    public function show($id)
+    {
+        return VocabularyDay::where('id', $id)->first();
     }
 }
