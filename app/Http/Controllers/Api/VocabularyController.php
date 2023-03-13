@@ -102,6 +102,7 @@ class VocabularyController extends Controller
             'vietnamese' => $request->vietnamese,
             'example' => $request->example,
         ]);
+        return response()->json(['status' => 'ok']);
     }
 
     /**
