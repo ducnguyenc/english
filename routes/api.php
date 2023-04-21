@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\SinusController;
 use App\Http\Controllers\Api\VocabularyController;
+use App\Http\Controllers\Api\Jp\VocabularyController as JpVocabularyController;
 use App\Http\Controllers\FlirtController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,14 @@ use Illuminate\Support\Facades\Route;
             Route::post('vocabulary/delete', [VocabularyController::class, 'delete'])->name('vocabulary.delete');
         });
 
+    });
+
+    Route::prefix('japanese')->group(function () {
+        Route::name('japanese.')->group(function () {
+            Route::resource('vocabulary', JpVocabularyController::class)->only(['index', 'store', 'destroy', 'show', 'update']);
+            Route::post('vocabulary/forward', [JpVocabularyController::class, 'forward'])->name('vocabulary.forward');
+            Route::post('vocabulary/delete', [JpVocabularyController::class, 'delete'])->name('vocabulary.delete');
+        });
     });
 
     Route::prefix('flirt')->group(function () {

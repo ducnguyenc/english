@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\JpVocabulary;
 use App\Models\VocabularyDay;
 use Illuminate\Support\Facades\DB;
 use Goutte\Client;
@@ -112,4 +113,59 @@ class VocabularyService implements VocabularyInterface
         }
     }
     */
+
+    public function createJp(array $params)
+    {
+        try {
+            DB::beginTransaction();
+            $vocabularyDay = JpVocabulary::firstOrCreate(
+                ['japanese' => Str::lower($params['japanese'])],
+                [
+                    'spell' => 'a',
+                    'vietnamese' => Str::lower($params['vietnamese']),
+                    'example' => $params['example'],
+                    'day' => 1,
+                    'status' => 0,
+                ]
+            );
+            DB::commit();
+        } catch (\Exception $exception) {
+            DB::rollBack();
+            return $exception->getMessage();
+        }
+
+        return [$vocabularyDay, $params];
+    }
+
+    public function deleteJp(array $params)
+    {
+        JpVocabulary::whereIn('id', $params['idVocabulary'])->delete();
+    }
+
+    public function forwardJp(array $params)
+    {
+        $day = $params['day'];
+        $idVocabulary = $params['idVocabulary'];
+
+        if($day == 1){
+            foreach ($idVocabulary as $id) {
+                JpVocabulary::find($id)->update([
+                    'day' => $day + 1,
+                    'status' => 1,
+                ]);
+            }
+            return;
+        }
+
+        if($day == 5){
+            return;
+        }
+
+        foreach ($idVocabulary as $id) {
+            JpVocabulary::find($id)->update([
+                'day' => $day + 1,
+                'status' => rand(0,1),
+            ]);
+        }
+    }
 }
