@@ -67,7 +67,7 @@ class VocabularyController extends Controller
      */
     public function update(Request $request, $id)
     {
-        VocabularyDay::where('id', $id)->updateJp([
+        VocabularyDay::where('id', $id)->update([
             'japanese' => $request->japanese,
             'spell' => $request->spell,
             'vietnamese' => $request->vietnamese,
