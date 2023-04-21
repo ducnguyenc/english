@@ -69,6 +69,7 @@ class VocabularyController extends Controller
     {
         VocabularyDay::where('id', $id)->updateJp([
             'japanese' => $request->japanese,
+            'spell' => $request->spell,
             'vietnamese' => $request->vietnamese,
             'example' => $request->example,
         ]);

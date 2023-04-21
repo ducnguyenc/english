@@ -16,7 +16,7 @@ class CreateJpVocabulariesTable extends Migration
         Schema::create('jp_vocabularies', function (Blueprint $table) {
             $table->id();
             $table->string('japanese');
-            $table->json('spell');
+            $table->string('spell');
             $table->string('vietnamese');
             $table->string('example')->nullable();
             $table->integer('status')->default(0);

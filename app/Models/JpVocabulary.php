@@ -20,7 +20,7 @@ class JpVocabulary extends Model
     ];
     protected $casts = [
         'japanese' => 'string',
-        'spell' => 'array',
+        'spell' => 'string',
         'vietnamese' => 'string',
         'example' => 'string',
         'day' => 'integer',

@@ -121,7 +121,7 @@ class VocabularyService implements VocabularyInterface
             $vocabularyDay = JpVocabulary::firstOrCreate(
                 ['japanese' => Str::lower($params['japanese'])],
                 [
-                    'spell' => 'a',
+                    'spell' => $params['spell'],
                     'vietnamese' => Str::lower($params['vietnamese']),
                     'example' => $params['example'],
                     'day' => 1,
