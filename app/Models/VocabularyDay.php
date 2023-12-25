@@ -12,6 +12,7 @@ class VocabularyDay extends Model
     protected $table = 'vocabulary_days';
     protected $fillable = [
         'english',
+        'part_of_speech',
         'spell',
         'vietnamese',
         'example',
