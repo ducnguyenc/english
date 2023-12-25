@@ -17,7 +17,7 @@ class VocabularyService implements VocabularyInterface
     public function create(array $params)
     {
         $arrayEnglish = explode(' ', $params['english']);
-        $spellUS = $spellUK = '';
+        $spellUS = $spellUK = $partOfSpeech = '';
         foreach ($arrayEnglish as $english) {
             $client = new Client();
             $crawler = $client->request(
@@ -26,6 +26,7 @@ class VocabularyService implements VocabularyInterface
             );
             $spellUS = $spellUS . ' /' . $crawler->filter('.us.dpron-i span.ipa')->first()->text() . '/' ?? null;
             $spellUK = $spellUK . ' /' . $crawler->filter('.uk.dpron-i span.ipa')->first()->text() . '/' ?? null;
+            $partOfSpeech = $partOfSpeech . $crawler->filter('.pos.dpos')->first()->text() ?? null;
         }
         $spell = [
             'us' => trim($spellUS),
@@ -36,6 +37,7 @@ class VocabularyService implements VocabularyInterface
             $vocabularyDay = VocabularyDay::firstOrCreate(
                 ['english' => Str::lower($params['english'])],
                 [
+                    'part_of_speech' => $partOfSpeech,
                     'spell' => $spell,
                     'vietnamese' => Str::lower($params['vietnamese']),
                     'example' => $params['example'],
