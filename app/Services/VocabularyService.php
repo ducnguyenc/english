@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\JpVocabulary;
 use App\Models\VocabularyDay;
+use DOMDocument;
+use DOMXPath;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\DB;
-use Goutte\Client;
 use Str;
 
 class VocabularyService implements VocabularyInterface
@@ -20,13 +22,15 @@ class VocabularyService implements VocabularyInterface
         $spellUS = $spellUK = $partOfSpeech = '';
         foreach ($arrayEnglish as $english) {
             $client = new Client();
-            $crawler = $client->request(
-                'GET',
-                'https://dictionary.cambridge.org/dictionary/english/' . $english
-            );
-            $spellUS = $spellUS . ' /' . $crawler->filter('.us.dpron-i span.ipa')->first()->text() . '/' ?? null;
-            $spellUK = $spellUK . ' /' . $crawler->filter('.uk.dpron-i span.ipa')->first()->text() . '/' ?? null;
-            $partOfSpeech = $partOfSpeech . $crawler->filter('.pos.dpos')->first()->text() ?? null;
+            $response = $client->request('GET', 'https://dictionary.cambridge.org/dictionary/english/' . $english);
+            $htmlString = (string)$response->getBody();
+            libxml_use_internal_errors(true);
+            $doc = new DOMDocument();
+            $doc->loadHTML($htmlString);
+            $crawler = new DOMXPath($doc);
+            $spellUS = $spellUS . ' /' . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/span[1]/span[3]/span')[0]->nodeValue . '/' ?? null;
+            $spellUK = $spellUK . ' /' . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/span[2]/span[3]/span')[0]->nodeValue . '/' ?? null;
+            $partOfSpeech = $partOfSpeech . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/div[2]/span[1]')[0]->nodeValue ?? null;
         }
         $spell = [
             'us' => trim($spellUS),
@@ -59,7 +63,7 @@ class VocabularyService implements VocabularyInterface
         $day = $params['day'];
         $idVocabulary = $params['idVocabulary'];
 
-        if($day == 1){
+        if ($day == 1) {
             foreach ($idVocabulary as $id) {
                 VocabularyDay::find($id)->update([
                     'day' => $day + 1,
@@ -69,14 +73,14 @@ class VocabularyService implements VocabularyInterface
             return;
         }
 
-        if($day == 5){
+        if ($day == 5) {
             return;
         }
 
         foreach ($idVocabulary as $id) {
             VocabularyDay::find($id)->update([
                 'day' => $day + 1,
-                'status' => rand(0,1),
+                'status' => rand(0, 1),
             ]);
         }
     }
@@ -149,7 +153,7 @@ class VocabularyService implements VocabularyInterface
         $day = $params['day'];
         $idVocabulary = $params['idVocabulary'];
 
-        if($day == 1){
+        if ($day == 1) {
             foreach ($idVocabulary as $id) {
                 JpVocabulary::find($id)->update([
                     'day' => $day + 1,
@@ -159,14 +163,14 @@ class VocabularyService implements VocabularyInterface
             return;
         }
 
-        if($day == 5){
+        if ($day == 5) {
             return;
         }
 
         foreach ($idVocabulary as $id) {
             JpVocabulary::find($id)->update([
                 'day' => $day + 1,
-                'status' => rand(0,1),
+                'status' => rand(0, 1),
             ]);
         }
     }
