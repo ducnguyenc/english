@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\JpVocabulary;
 use App\Models\VocabularyDay;
-use DOMDocument;
-use DOMXPath;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\DB;
 use Str;
@@ -26,7 +24,6 @@ class VocabularyService implements VocabularyInterface
             $response = $client->request('GET', 'https://dictionary.cambridge.org/dictionary/english/' . $english);
             $htmlString = (string)$response->getBody();
             $crawler = new Crawler($htmlString);
-            $crawler->filter('.uk.dpron-i span.pron span.ipa')->text();
             $spellUS = $spellUS . ' /' . $crawler->filter('.uk.dpron-i span.pron span.ipa')->text() . '/' ?? null;
             $spellUK = $spellUK . ' /' . $crawler->filter('.us.dpron-i span.pron span.ipa')->text() . '/' ?? null;
             $partOfSpeech = $partOfSpeech . $crawler->filter('.pos.dpos')->text() ?? null;
