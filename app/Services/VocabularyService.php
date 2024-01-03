@@ -9,6 +9,7 @@ use DOMXPath;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\DB;
 use Str;
+use Symfony\Component\DomCrawler\Crawler;
 
 class VocabularyService implements VocabularyInterface
 {
@@ -24,13 +25,11 @@ class VocabularyService implements VocabularyInterface
             $client = new Client();
             $response = $client->request('GET', 'https://dictionary.cambridge.org/dictionary/english/' . $english);
             $htmlString = (string)$response->getBody();
-            libxml_use_internal_errors(true);
-            $doc = new DOMDocument();
-            $doc->loadHTML($htmlString);
-            $crawler = new DOMXPath($doc);
-            $spellUS = $spellUS . ' /' . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/span[1]/span[3]/span')[0]->nodeValue . '/' ?? null;
-            $spellUK = $spellUK . ' /' . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/span[2]/span[3]/span')[0]->nodeValue . '/' ?? null;
-            $partOfSpeech = $partOfSpeech . $crawler->evaluate('//*[@id="page-content"]/div[2]/div[1]/div[2]/div/div[3]/div/div/div[1]/div[2]/div[2]/span[1]')[0]->nodeValue ?? null;
+            $crawler = new Crawler($htmlString);
+            $crawler->filter('.uk.dpron-i span.pron span.ipa')->text();
+            $spellUS = $spellUS . ' /' . $crawler->filter('.uk.dpron-i span.pron span.ipa')->text() . '/' ?? null;
+            $spellUK = $spellUK . ' /' . $crawler->filter('.us.dpron-i span.pron span.ipa')->text() . '/' ?? null;
+            $partOfSpeech = $partOfSpeech . $crawler->filter('.pos.dpos')->text() ?? null;
         }
         $spell = [
             'us' => trim($spellUS),
