@@ -93,6 +93,7 @@ class VocabularyController extends Controller
             'english' => $request->english,
             'vietnamese' => $request->vietnamese,
             'example' => $request->example,
+            'image' => $request->image,
         ]);
         return response()->json(['status' => 'ok']);
     }

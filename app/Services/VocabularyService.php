@@ -43,6 +43,7 @@ class VocabularyService implements VocabularyInterface
                     'example' => $params['example'],
                     'day' => 1,
                     'status' => 0,
+                    'image' => $params['image'],
                 ]
             );
             DB::commit();

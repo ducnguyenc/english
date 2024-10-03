@@ -18,6 +18,7 @@ class VocabularyDay extends Model
         'example',
         'day',
         'status',
+        'image',
     ];
     protected $casts = [
         'english' => 'string',
@@ -26,5 +27,6 @@ class VocabularyDay extends Model
         'example' => 'string',
         'day' => 'integer',
         'status' => 'integer',
+        'image' => 'string',
     ];
 }
