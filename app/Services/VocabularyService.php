@@ -6,7 +6,8 @@ use App\Models\JpVocabulary;
 use App\Models\VocabularyDay;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\DB;
-use Str;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Symfony\Component\DomCrawler\Crawler;
 
 class VocabularyService implements VocabularyInterface
@@ -20,8 +21,9 @@ class VocabularyService implements VocabularyInterface
         $arrayEnglish = explode(' ', $params['english']);
         $spellUS = $spellUK = $partOfSpeech = '';
         foreach ($arrayEnglish as $english) {
-            $client = new Client();
-            $response = $client->request('GET', 'https://dictionary.cambridge.org/dictionary/english/' . $english);
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            ])->get('https://dictionary.cambridge.org/dictionary/english/' . $english);
             $htmlString = (string)$response->getBody();
             $crawler = new Crawler($htmlString);
             $spellUS = $spellUS . ' /' . $crawler->filter('.uk.dpron-i span.pron span.ipa')->text() . '/' ?? null;
