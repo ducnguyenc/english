@@ -12,15 +12,15 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class VocabularyService implements VocabularyInterface
 {
-    public function index()
-    {
-    }
+    public function index() {}
 
     public function create(array $params)
     {
-        $arrayEnglish = explode(' ', $params['english']);
-        $spellUS = $spellUK = $partOfSpeech = '';
-        foreach ($arrayEnglish as $english) {
+        try {
+            $english = $params['english'];
+            // $arrayEnglish = explode(' ', $params['english']);
+            $spellUS = $spellUK = $partOfSpeech = '';
+            // foreach ($arrayEnglish as $english) {
             $response = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
             ])->get('https://dictionary.cambridge.org/dictionary/english/' . $english);
@@ -29,11 +29,16 @@ class VocabularyService implements VocabularyInterface
             $spellUS = $spellUS . ' /' . $crawler->filter('.uk.dpron-i span.pron span.ipa')->text() . '/' ?? null;
             $spellUK = $spellUK . ' /' . $crawler->filter('.us.dpron-i span.pron span.ipa')->text() . '/' ?? null;
             $partOfSpeech = $partOfSpeech . $crawler->filter('.pos.dpos')->text() ?? null;
+            // }
+            $spell = [
+                'us' => trim($spellUS),
+                'uk' => trim($spellUK),
+            ];
+        } catch (\Throwable $th) {
+            $partOfSpeech = null;
+            $spell = '';
         }
-        $spell = [
-            'us' => trim($spellUS),
-            'uk' => trim($spellUK),
-        ];
+
         try {
             DB::beginTransaction();
             $vocabularyDay = VocabularyDay::firstOrCreate(
