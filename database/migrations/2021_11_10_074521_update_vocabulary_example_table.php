@@ -14,7 +14,7 @@ class UpdateVocabularyExampleTable extends Migration
     public function up()
     {
         Schema::table('vocabulary_days', function (Blueprint $table) {
-            $table->string('example')->nullable();
+            $table->text('example')->nullable();
         });
     }
 
