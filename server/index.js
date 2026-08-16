@@ -16,36 +16,36 @@ function parseJsonCol(v) {
   return typeof v === 'string' ? JSON.parse(v) : v
 }
 
-/** Ghép row (cột riêng lẻ) lại thành ContentItem — bỏ qua field null/undefined để không đè lên optional. */
+/** Ghép row (cột riêng lẻ) lại thành ContentItem */
 function rowToItem(row) {
   const base = { id: row.id, kind: row.kind, topic: row.topic ?? undefined }
   const fields =
     row.kind === 'word'
       ? {
-          english: row.english,
-          ipa: row.ipa,
-          vietnamese: row.vietnamese,
-          type: row.word_type ?? undefined,
-          example: row.example,
-          exampleVi: row.example_vi ?? undefined,
-          image: row.image ?? undefined,
-          note: row.note ?? undefined,
-          collocations: parseJsonCol(row.collocations),
-          etymology: parseJsonCol(row.etymology),
-        }
+        english: row.english,
+        ipa: row.ipa,
+        vietnamese: row.vietnamese,
+        type: row.word_type ?? undefined,
+        example: row.example,
+        exampleVi: row.example_vi ?? undefined,
+        image: row.image ?? undefined,
+        note: row.note ?? undefined,
+        collocations: parseJsonCol(row.collocations),
+        etymology: parseJsonCol(row.etymology),
+      }
       : {
-          formula: row.formula,
-          meaningVi: row.meaning_vi,
-          examples: parseJsonCol(row.examples) ?? [],
-          image: row.image ?? undefined,
-          note: row.note ?? undefined,
-        }
+        formula: row.formula,
+        meaningVi: row.meaning_vi,
+        examples: parseJsonCol(row.examples) ?? [],
+        image: row.image ?? undefined,
+        note: row.note ?? undefined,
+      }
   const item = { ...base, ...fields }
   for (const key of Object.keys(item)) if (item[key] === undefined) delete item[key]
   return item
 }
 
-/** Tách ContentItem thành các cột SQL tương ứng (word/pattern), điền NULL cho cột không thuộc kind. */
+/** Tách ContentItem thành các cột SQL tương ứng (word/pattern) */
 function itemToColumns(item) {
   const isWord = item.kind === 'word'
   return {
@@ -65,39 +65,41 @@ function itemToColumns(item) {
   }
 }
 
+// SQLite dùng INSERT OR REPLACE thay vì ON DUPLICATE KEY UPDATE
 const UPSERT_ITEM_SQL = `
-  INSERT INTO content_items
+  INSERT OR REPLACE INTO content_items
     (id, kind, topic, english, ipa, vietnamese, word_type, example, example_vi, note,
      collocations, etymology, formula, meaning_vi, examples, image)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  ON DUPLICATE KEY UPDATE
-    kind = VALUES(kind), topic = VALUES(topic), english = VALUES(english), ipa = VALUES(ipa),
-    vietnamese = VALUES(vietnamese), word_type = VALUES(word_type), example = VALUES(example),
-    example_vi = VALUES(example_vi), note = VALUES(note), collocations = VALUES(collocations),
-    etymology = VALUES(etymology), formula = VALUES(formula), meaning_vi = VALUES(meaning_vi),
-    examples = VALUES(examples), image = VALUES(image)
+  VALUES (@id, @kind, @topic, @english, @ipa, @vietnamese, @word_type, @example, @example_vi, @note,
+          @collocations, @etymology, @formula, @meaning_vi, @examples, @image)
 `
 
-function upsertItemParams(item) {
+const upsertItemStmt = pool.prepare(UPSERT_ITEM_SQL)
+const insertProgressStmt = pool.prepare(
+  'INSERT OR IGNORE INTO item_progress (item_id, day) VALUES (@item_id, 1)'
+)
+
+function upsertItem(item) {
   const c = itemToColumns(item)
-  return [
-    item.id,
-    item.kind,
-    item.topic ?? null,
-    c.english,
-    c.ipa,
-    c.vietnamese,
-    c.word_type,
-    c.example,
-    c.example_vi,
-    c.note,
-    c.collocations,
-    c.etymology,
-    c.formula,
-    c.meaning_vi,
-    c.examples,
-    c.image,
-  ]
+  upsertItemStmt.run({
+    id: item.id,
+    kind: item.kind,
+    topic: item.topic ?? null,
+    english: c.english,
+    ipa: c.ipa,
+    vietnamese: c.vietnamese,
+    word_type: c.word_type,
+    example: c.example,
+    example_vi: c.example_vi,
+    note: c.note,
+    collocations: c.collocations,
+    etymology: c.etymology,
+    formula: c.formula,
+    meaning_vi: c.meaning_vi,
+    examples: c.examples,
+    image: c.image,
+  })
+  insertProgressStmt.run({ item_id: item.id })
 }
 
 function rowToProgress(row) {
@@ -111,74 +113,69 @@ function rowToProgress(row) {
   }
 }
 
-async function ensureSeeded() {
-  const [rows] = await pool.query('SELECT COUNT(*) AS c FROM content_items')
-  if (rows[0].c > 0) return
-  for (const item of SEED_ITEMS) {
-    await pool.query(UPSERT_ITEM_SQL, upsertItemParams(item))
-    await pool.query('INSERT IGNORE INTO item_progress (item_id, day) VALUES (?, 1)', [item.id])
-  }
+function ensureSeeded() {
+  const row = pool.prepare('SELECT COUNT(*) AS c FROM content_items').get()
+  if (row.c > 0) return
+  const insertMany = pool.transaction((items) => {
+    for (const item of items) upsertItem(item)
+  })
+  insertMany(SEED_ITEMS)
   console.log(`Seeded ${SEED_ITEMS.length} mục mẫu vào content_items.`)
 }
 
 // ---------- content_items ----------
-app.get('/api/items', async (_req, res, next) => {
+app.get('/api/items', (_req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM content_items ORDER BY created_at ASC')
+    const rows = pool.prepare('SELECT * FROM content_items ORDER BY created_at ASC').all()
     res.json(rows.map(rowToItem))
   } catch (err) {
     next(err)
   }
 })
 
-app.post('/api/items', async (req, res, next) => {
+app.post('/api/items', (req, res, next) => {
   try {
     const item = req.body
     if (!item?.id || !item?.kind) return res.status(400).json({ error: 'Thiếu id hoặc kind' })
-    await pool.query(UPSERT_ITEM_SQL, upsertItemParams(item))
-    await pool.query('INSERT IGNORE INTO item_progress (item_id, day) VALUES (?, 1)', [item.id])
+    upsertItem(item)
     res.json({ ok: true })
   } catch (err) {
     next(err)
   }
 })
 
-app.delete('/api/items/:id', async (req, res, next) => {
+app.delete('/api/items/:id', (req, res, next) => {
   try {
-    await pool.query('DELETE FROM content_items WHERE id = ?', [req.params.id])
+    pool.prepare('DELETE FROM content_items WHERE id = ?').run(req.params.id)
     res.json({ ok: true })
   } catch (err) {
     next(err)
   }
 })
 
-/** Import JSON hàng loạt — thêm mới, đè theo id nếu trùng (không xoá nội dung đang có). */
-app.post('/api/items/import', async (req, res, next) => {
+/** Import JSON hàng loạt — thêm mới, đè theo id nếu trùng */
+app.post('/api/items/import', (req, res, next) => {
   const items = req.body
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Body phải là mảng ContentItem[]' })
-  const conn = await pool.getConnection()
   try {
-    await conn.beginTransaction()
-    for (const item of items) {
-      if (!item?.id || !item?.kind) throw new Error(`Item thiếu id hoặc kind: ${JSON.stringify(item)}`)
-      await conn.query(UPSERT_ITEM_SQL, upsertItemParams(item))
-      await conn.query('INSERT IGNORE INTO item_progress (item_id, day) VALUES (?, 1)', [item.id])
-    }
-    await conn.commit()
+    const importMany = pool.transaction((list) => {
+      for (const item of list) {
+        if (!item?.id || !item?.kind) throw new Error(`Item thiếu id hoặc kind: ${JSON.stringify(item)}`)
+        upsertItem(item)
+      }
+    })
+    importMany(items)
     res.json({ ok: true, count: items.length })
   } catch (err) {
-    await conn.rollback()
     next(err)
-  } finally {
-    conn.release()
   }
 })
 
-/** Xoá hết nội dung tự thêm, seed lại từ dữ liệu mẫu ban đầu. */
-app.post('/api/items/reset', async (_req, res, next) => {
+/** Xoá hết nội dung, seed lại từ dữ liệu mẫu ban đầu */
+app.post('/api/items/reset', (_req, res, next) => {
   try {
-    await pool.query('DELETE FROM content_items')
-    await ensureSeeded()
+    pool.prepare('DELETE FROM content_items').run()
+    ensureSeeded()
     res.json({ ok: true })
   } catch (err) {
     next(err)
@@ -186,82 +183,75 @@ app.post('/api/items/reset', async (_req, res, next) => {
 })
 
 // ---------- item_progress ----------
-app.get('/api/progress', async (_req, res, next) => {
+app.get('/api/progress', (_req, res, next) => {
   try {
-    const [progressRows] = await pool.query('SELECT * FROM item_progress')
-    const [[state]] = await pool.query('SELECT * FROM app_state WHERE id = 1')
+    const progressRows = pool.prepare('SELECT * FROM item_progress').all()
+    const state = pool.prepare('SELECT * FROM app_state WHERE id = 1').get()
     const items = {}
     for (const row of progressRows) items[row.item_id] = rowToProgress(row)
     res.json({
       items,
       streak: state?.streak ?? 0,
-      lastStudyDate: state?.last_study_date
-        ? new Date(state.last_study_date).toISOString().slice(0, 10)
-        : null,
+      lastStudyDate: state?.last_study_date ?? null,
     })
   } catch (err) {
     next(err)
   }
 })
 
-app.post('/api/progress/:itemId', async (req, res, next) => {
+app.post('/api/progress/:itemId', (req, res, next) => {
   try {
     const { itemId } = req.params
     const { day, correctStreak, wrongCount, lastReviewedAt, history } = req.body
-    await pool.query(
-      `INSERT INTO item_progress (item_id, day, correct_streak, wrong_count, last_reviewed_at, history)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE day = VALUES(day), correct_streak = VALUES(correct_streak),
-         wrong_count = VALUES(wrong_count), last_reviewed_at = VALUES(last_reviewed_at), history = VALUES(history)`,
-      [itemId, day, correctStreak, wrongCount, lastReviewedAt, JSON.stringify(history ?? [])],
-    )
+    pool.prepare(
+      `INSERT OR REPLACE INTO item_progress (item_id, day, correct_streak, wrong_count, last_reviewed_at, history)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(itemId, day, correctStreak, wrongCount, lastReviewedAt, JSON.stringify(history ?? []))
     res.json({ ok: true })
   } catch (err) {
     next(err)
   }
 })
 
-/** Đảm bảo mọi itemId truyền lên đều có 1 dòng progress (mặc định Day 1) — dùng khi có item mới. */
-app.post('/api/progress/ensure', async (req, res, next) => {
+/** Đảm bảo mọi itemId đều có 1 dòng progress (mặc định Day 1) */
+app.post('/api/progress/ensure', (req, res, next) => {
   try {
     const ids = req.body?.ids
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'Body cần { ids: string[] }' })
-    for (const id of ids) {
-      await pool.query('INSERT IGNORE INTO item_progress (item_id, day) VALUES (?, 1)', [id])
-    }
+    const stmt = pool.prepare('INSERT OR IGNORE INTO item_progress (item_id, day) VALUES (?, 1)')
+    const insertAll = pool.transaction((list) => {
+      for (const id of list) stmt.run(id)
+    })
+    insertAll(ids)
     res.json({ ok: true })
   } catch (err) {
     next(err)
   }
 })
 
-app.post('/api/progress/streak/bump', async (req, res, next) => {
+app.post('/api/progress/streak/bump', (req, res, next) => {
   try {
     const today = req.body?.today // "YYYY-MM-DD"
     if (!today) return res.status(400).json({ error: 'Body cần { today: "YYYY-MM-DD" }' })
-    const [[state]] = await pool.query('SELECT * FROM app_state WHERE id = 1')
-    const lastStudyDate = state?.last_study_date
-      ? new Date(state.last_study_date).toISOString().slice(0, 10)
-      : null
-    if (lastStudyDate === today) return res.json({ ok: true, streak: state.streak }) // đã tính hôm nay
+    const state = pool.prepare('SELECT * FROM app_state WHERE id = 1').get()
+    const lastStudyDate = state?.last_study_date ?? null
+    if (lastStudyDate === today) return res.json({ ok: true, streak: state.streak })
 
     const yesterday = new Date(Date.parse(today + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10)
     const newStreak = lastStudyDate === yesterday ? (state?.streak ?? 0) + 1 : 1
-    await pool.query(
-      `INSERT INTO app_state (id, streak, last_study_date) VALUES (1, ?, ?)
-       ON DUPLICATE KEY UPDATE streak = VALUES(streak), last_study_date = VALUES(last_study_date)`,
-      [newStreak, today],
-    )
+    pool.prepare(
+      `INSERT OR REPLACE INTO app_state (id, streak, last_study_date) VALUES (1, ?, ?)`
+    ).run(newStreak, today)
     res.json({ ok: true, streak: newStreak })
   } catch (err) {
     next(err)
   }
 })
 
-app.post('/api/progress/reset', async (_req, res, next) => {
+app.post('/api/progress/reset', (_req, res, next) => {
   try {
-    await pool.query('DELETE FROM item_progress')
-    await pool.query('UPDATE app_state SET streak = 0, last_study_date = NULL WHERE id = 1')
+    pool.prepare('DELETE FROM item_progress').run()
+    pool.prepare('UPDATE app_state SET streak = 0, last_study_date = NULL WHERE id = 1').run()
     res.json({ ok: true })
   } catch (err) {
     next(err)
@@ -273,14 +263,16 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message })
 })
 
-async function start() {
-  await pingDb()
-  console.log('✅ Kết nối MySQL thành công.')
-  await ensureSeeded()
+function start() {
+  pingDb()
+  console.log('✅ Kết nối SQLite thành công.')
+  ensureSeeded()
   app.listen(PORT, () => console.log(`🚀 API server chạy tại http://localhost:${PORT}`))
 }
 
-start().catch((err) => {
+try {
+  start()
+} catch (err) {
   console.error('❌ Không khởi động được server:', err.message)
   process.exit(1)
-})
+}

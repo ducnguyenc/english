@@ -1,60 +1,53 @@
--- Chạy trên database `laravel` đã có sẵn (không CREATE DATABASE, chỉ tạo bảng).
--- mysql -h 127.0.0.1 -P 3322 -u root -ppassword laravel < server/schema.sql
+-- SQLite schema (dùng với better-sqlite3)
 
--- Mỗi field của Word/Pattern (xem src/types.ts) có 1 cột riêng, thay vì gộp hết vào 1 cột JSON.
--- Cột nào chỉ thuộc "word" hoặc chỉ thuộc "pattern" thì để NULL ở dòng thuộc kind còn lại.
--- Riêng collocations / examples (mảng {en,vi}) / etymology (nested: root, word_family,
--- common_confusions, example_sentences, additional_notes...) vẫn giữ JSON vì là dữ liệu
--- lồng nhau, tách thành bảng riêng sẽ tốn công hơn lợi ích thu được.
 CREATE TABLE IF NOT EXISTS content_items (
-  id            VARCHAR(191)  NOT NULL PRIMARY KEY,
-  kind          ENUM('word', 'pattern') NOT NULL,
-  topic         VARCHAR(191)  NULL,
+  id            TEXT          NOT NULL PRIMARY KEY,
+  kind          TEXT          NOT NULL CHECK(kind IN ('word', 'pattern')),
+  topic         TEXT          NULL,
 
   -- Word
-  english       VARCHAR(191)  NULL,
-  ipa           VARCHAR(191)  NULL,
-  vietnamese    VARCHAR(500)  NULL,
-  word_type     VARCHAR(20)   NULL,   -- 'type' là từ khoá SQL nên đặt tên cột khác
+  english       TEXT          NULL,
+  ipa           TEXT          NULL,
+  vietnamese    TEXT          NULL,
+  word_type     TEXT          NULL,
   example       TEXT          NULL,
   example_vi    TEXT          NULL,
   note          TEXT          NULL,
-  collocations  JSON          NULL,
-  etymology     JSON          NULL,
+  collocations  TEXT          NULL,  -- JSON string
+  etymology     TEXT          NULL,  -- JSON string
 
   -- Pattern
-  formula       VARCHAR(500)  NULL,
-  meaning_vi    VARCHAR(500)  NULL,
-  examples      JSON          NULL,
+  formula       TEXT          NULL,
+  meaning_vi    TEXT          NULL,
+  examples      TEXT          NULL,  -- JSON string
 
   -- Dùng chung
-  image         MEDIUMTEXT    NULL,   -- emoji, URL, hoặc data URI base64 (ảnh nén)
+  image         TEXT          NULL,  -- emoji, URL, hoặc data URI base64
 
-  created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_kind (kind),
-  INDEX idx_topic (topic)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  created_at    TEXT          NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT          NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_kind  ON content_items(kind);
+CREATE INDEX IF NOT EXISTS idx_topic ON content_items(topic);
 
 CREATE TABLE IF NOT EXISTS item_progress (
-  item_id           VARCHAR(191)  NOT NULL PRIMARY KEY,
-  day               TINYINT       NOT NULL DEFAULT 1,   -- 1..5 = tầng Leitner, 6 = Đã thuộc
-  correct_streak    INT           NOT NULL DEFAULT 0,
-  wrong_count       INT           NOT NULL DEFAULT 0,
-  last_reviewed_at  BIGINT        NULL,                 -- epoch ms, khớp với progress.ts cũ
-  history           JSON          NOT NULL DEFAULT (JSON_ARRAY()),
-  CONSTRAINT fk_progress_item FOREIGN KEY (item_id) REFERENCES content_items(id) ON DELETE CASCADE,
-  INDEX idx_day (day)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  item_id           TEXT    NOT NULL PRIMARY KEY,
+  day               INTEGER NOT NULL DEFAULT 1,
+  correct_streak    INTEGER NOT NULL DEFAULT 0,
+  wrong_count       INTEGER NOT NULL DEFAULT 0,
+  last_reviewed_at  INTEGER NULL,
+  history           TEXT    NOT NULL DEFAULT '[]',
+  FOREIGN KEY (item_id) REFERENCES content_items(id) ON DELETE CASCADE
+);
 
--- Trạng thái tổng (streak học liên tiếp) — chỉ 1 dòng vì single-user, không cần bảng users.
+CREATE INDEX IF NOT EXISTS idx_day ON item_progress(day);
+
 CREATE TABLE IF NOT EXISTS app_state (
-  id                TINYINT       NOT NULL PRIMARY KEY DEFAULT 1,
-  streak            INT           NOT NULL DEFAULT 0,
-  last_study_date   DATE          NULL,
-  CONSTRAINT chk_singleton CHECK (id = 1)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  id              INTEGER NOT NULL PRIMARY KEY DEFAULT 1,
+  streak          INTEGER NOT NULL DEFAULT 0,
+  last_study_date TEXT    NULL,
+  CHECK (id = 1)
+);
 
-INSERT INTO app_state (id, streak, last_study_date)
-VALUES (1, 0, NULL)
-ON DUPLICATE KEY UPDATE id = id;
+INSERT OR IGNORE INTO app_state (id, streak, last_study_date) VALUES (1, 0, NULL);
