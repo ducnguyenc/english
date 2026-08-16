@@ -244,13 +244,29 @@ function EtymologySection({ etymology }: { etymology: WordEtymology }) {
         <div className="space-y-3">
           <SectionTitle>Phân biệt dễ nhầm</SectionTitle>
           {etymology.common_confusions.map((c, i) => {
-            const keys = Array.from(new Set(c.details?.flatMap((d) => Object.keys(d)) ?? []))
+            // Phân biệt details là string[] hay Record<string,string>[]
+            const isStringArray =
+              Array.isArray(c.details) && (c.details.length === 0 || typeof c.details[0] === 'string')
+            const objDetails = isStringArray ? [] : (c.details as Record<string, string>[] | undefined)
+            const strDetails = isStringArray ? (c.details as string[]) : []
+            const keys = Array.from(new Set(objDetails?.flatMap((d) => Object.keys(d)) ?? []))
             return (
               <div key={i} className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-2.5 space-y-2">
                 <div className="text-xs font-medium text-amber-700 dark:text-amber-400">{c.title}</div>
+
+                {/* Format mới: details là string[] — hiển thị dạng danh sách */}
+                {strDetails.length > 0 && (
+                  <ul className="text-xs space-y-1 list-disc list-inside text-slate-600 dark:text-slate-300">
+                    {strDetails.map((line, li) => (
+                      <li key={li}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Format cũ: details là Record<string,string>[] — hiển thị dạng bảng */}
                 {keys.length > 0 && (
                   <Table head={keys.map((k) => <Th key={k}>{detailKeyLabel(k)}</Th>)}>
-                    {c.details!.map((d, di) => (
+                    {objDetails!.map((d, di) => (
                       <tr key={di} className="bg-white dark:bg-slate-900">
                         {keys.map((k) => (
                           <Td key={k}>{d[k]}</Td>
@@ -259,6 +275,7 @@ function EtymologySection({ etymology }: { etymology: WordEtymology }) {
                     ))}
                   </Table>
                 )}
+
                 {c.examples?.map((ex, ei) => (
                   <div key={ei} className="text-xs italic text-slate-500">
                     {ex}

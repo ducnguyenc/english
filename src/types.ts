@@ -25,10 +25,14 @@ export interface WordFormationEntry {
   structure: string
 }
 
-/** 1 điểm dễ nhầm lẫn (trọng âm, vùng miền, phát âm giống nhau...). Chi tiết linh hoạt theo từng loại nhầm lẫn. */
+/** 1 điểm dễ nhầm lẫn (trọng âm, vùng miền, phát âm giống nhau...). Chi tiết linh hoạt theo từng loại nhầm lẫn.
+ * details có thể là:
+ *   - string[]  → mỗi phần tử là 1 dòng mô tả / ví dụ (format JSON mới)
+ *   - Record<string, string>[]  → bảng key-value (format JSON cũ)
+ */
 export interface CommonConfusion {
   title: string
-  details?: Record<string, string>[]
+  details?: string[] | Record<string, string>[]
   examples?: string[]
   note?: string
 }
