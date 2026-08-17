@@ -6,6 +6,7 @@ import { applyAnswerAny, isHard } from '../lib/leitner'
 import { checkFillAnswer, isWord } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
+import { openWordDetail } from '../lib/wordDetail'
 import type { Word } from '../types'
 
 export default function Hard() {
@@ -62,7 +63,15 @@ export default function Hard() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <h1 className="text-xl font-bold text-center">🔥 Luyện tập trung từ khó ({hardWords.length})</h1>
-      <div className="rounded-2xl border border-orange-200 dark:border-orange-800 p-6 bg-orange-50/50 dark:bg-orange-950/30 text-center space-y-4">
+      <div className="relative rounded-2xl border border-orange-200 dark:border-orange-800 p-6 bg-orange-50/50 dark:bg-orange-950/30 text-center space-y-4">
+        <button
+          type="button"
+          className="absolute top-3 right-3 btn-icon"
+          title="Xem chi tiết"
+          onClick={() => openWordDetail(current)}
+        >
+          ℹ️
+        </button>
         <WordImage image={current.image} className="w-16 h-16 mx-auto" />
         <div className="text-2xl font-bold flex items-center justify-center gap-2">
           {current.english}

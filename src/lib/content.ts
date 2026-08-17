@@ -82,60 +82,77 @@ function slugify(s: string): string {
 }
 
 /**
- * Chấp nhận 2 dạng:
- * 1) Mảng ContentItem[] thuần.
- * 2) Object phân tích từ nguyên dạng { word, root, word_family, ..., flashcards: ContentItem[] } —
- *    tự lấy mảng "flashcards" ra để import, đồng thời gắn các trường từ nguyên (root, word_family,
- *    word_formation, common_confusions, additional_notes) vào đúng flashcard "word" trùng với "word" gốc.
+ * Xử lý 1 "entry theo từ" dạng { word, root, word_family, ..., flashcards: ContentItem[] } —
+ * tự lấy mảng "flashcards" ra để import, đồng thời gắn các trường từ nguyên (root, word_family,
+ * word_formation, common_confusions, additional_notes) vào đúng flashcard "word" trùng với "word" gốc.
  *
  * Lưu ý: etymology chỉ gắn được vào item kind:'word' (Pattern không có field etymology — xem types.ts).
  * Nếu "flashcards" không chứa item "word" nào khớp (vd. "word" là một cụm ngữ pháp và flashcard đi
  * kèm là 1 Pattern, như "stative verbs"), thay vì âm thầm bỏ mất dữ liệu, tự tạo thêm 1 Word tối giản
  * để làm chỗ chứa etymology, để không mất dữ liệu bạn đã bỏ công soạn.
  */
+function itemsFromEntry(entry: Record<string, unknown>): ContentItem[] {
+  const { flashcards, word, ...etymology } = entry as { flashcards: ContentItem[]; word: string; [k: string]: unknown }
+  const hasEtymology = Object.values(etymology).some(
+    (v) => (Array.isArray(v) && v.length > 0) || (v && typeof v === 'object' && Object.keys(v as object).length > 0),
+  )
+
+  if (!hasEtymology) return flashcards
+
+  const matchIdx = flashcards.findIndex(
+    (item) => item.kind === 'word' && normalizeWord(item.english) === normalizeWord(word),
+  )
+  if (matchIdx >= 0) {
+    return flashcards.map((item, i) => (i === matchIdx ? { ...item, etymology } : item))
+  }
+
+  // Không có Word nào khớp — tự tạo 1 Word tối giản mang etymology, giữ nguyên các flashcard khác.
+  const family = (etymology.word_family as { word: string; phonetic?: string; meaning_vi?: string }[] | undefined)?.find(
+    (f) => normalizeWord(f.word) === normalizeWord(word),
+  )
+  const root = etymology.root as { original_meaning?: string } | undefined
+  const firstExample = (etymology.example_sentences as { sentence_en?: string; sentence_vi?: string }[] | undefined)?.[0]
+  const synthWord: ContentItem = {
+    id: `w-${slugify(word)}`,
+    kind: 'word',
+    english: word,
+    ipa: family?.phonetic ?? '',
+    vietnamese: family?.meaning_vi ?? root?.original_meaning ?? '',
+    type: undefined,
+    example: firstExample?.sentence_en ?? '',
+    exampleVi: firstExample?.sentence_vi,
+    topic: flashcards[0]?.topic,
+    etymology,
+  }
+  return [synthWord, ...flashcards]
+}
+
+/**
+ * Chấp nhận 3 dạng:
+ * 1) Mảng ContentItem[] thuần (mỗi phần tử đã có id + kind).
+ * 2) Object phân tích từ nguyên dạng { word, root, word_family, ..., flashcards: ContentItem[] }.
+ * 3) Mảng nhiều entry dạng (2) — vd. xuất từ nhiều từ vựng cùng lúc — sẽ được gộp (flatten)
+ *    thành 1 mảng ContentItem[] duy nhất trước khi import.
+ */
 export async function importContentJson(json: string): Promise<{ count: number }> {
   const parsed = JSON.parse(json)
   let items: ContentItem[]
 
   if (Array.isArray(parsed)) {
-    items = parsed
-  } else if (parsed && Array.isArray(parsed.flashcards)) {
-    const { flashcards, word, ...etymology } = parsed
-    const hasEtymology = Object.values(etymology).some(
-      (v) => (Array.isArray(v) && v.length > 0) || (v && typeof v === 'object' && Object.keys(v).length > 0),
-    )
-
-    if (!hasEtymology) {
-      items = flashcards
+    const isFlatContentItems = parsed.every((el) => el && typeof el === 'object' && 'id' in el && 'kind' in el)
+    if (isFlatContentItems) {
+      items = parsed
     } else {
-      const matchIdx = flashcards.findIndex(
-        (item: ContentItem) => item.kind === 'word' && normalizeWord(item.english) === normalizeWord(word),
-      )
-      if (matchIdx >= 0) {
-        items = flashcards.map((item: ContentItem, i: number) =>
-          i === matchIdx ? { ...item, etymology } : item,
+      const isEntryArray = parsed.every((el) => el && typeof el === 'object' && Array.isArray(el.flashcards))
+      if (!isEntryArray) {
+        throw new Error(
+          'JSON phải là mảng ContentItem[] (mỗi phần tử có id + kind), hoặc mảng các entry có trường "flashcards"',
         )
-      } else {
-        // Không có Word nào khớp — tự tạo 1 Word tối giản mang etymology, giữ nguyên các flashcard khác.
-        const family = etymology.word_family?.find(
-          (f: { word: string }) => normalizeWord(f.word) === normalizeWord(word),
-        )
-        const firstExample = etymology.example_sentences?.[0]
-        const synthWord: ContentItem = {
-          id: `w-${slugify(word)}`,
-          kind: 'word',
-          english: word,
-          ipa: family?.phonetic ?? '',
-          vietnamese: family?.meaning_vi ?? etymology.root?.original_meaning ?? '',
-          type: undefined,
-          example: firstExample?.sentence_en ?? '',
-          exampleVi: firstExample?.sentence_vi,
-          topic: flashcards[0]?.topic,
-          etymology,
-        }
-        items = [synthWord, ...flashcards]
       }
+      items = parsed.flatMap((entry) => itemsFromEntry(entry))
     }
+  } else if (parsed && Array.isArray(parsed.flashcards)) {
+    items = itemsFromEntry(parsed)
   } else {
     throw new Error('JSON phải là một mảng ContentItem[], hoặc object có trường "flashcards"')
   }

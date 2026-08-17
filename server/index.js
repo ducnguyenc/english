@@ -153,19 +153,37 @@ app.delete('/api/items/:id', (req, res, next) => {
   }
 })
 
-/** Import JSON hàng loạt — thêm mới, đè theo id nếu trùng */
+/** Import JSON hàng loạt — bỏ qua item đã tồn tại (trùng id hoặc trùng từ tiếng Anh) */
 app.post('/api/items/import', (req, res, next) => {
   const items = req.body
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Body phải là mảng ContentItem[]' })
   try {
+    const existingIds = new Set(pool.prepare('SELECT id FROM content_items').all().map((r) => r.id))
+    const existingWords = new Set(
+      pool
+        .prepare("SELECT english FROM content_items WHERE kind = 'word' AND english IS NOT NULL")
+        .all()
+        .map((r) => r.english.trim().toLowerCase()),
+    )
+
+    let importedCount = 0
+    let skippedCount = 0
     const importMany = pool.transaction((list) => {
       for (const item of list) {
         if (!item?.id || !item?.kind) throw new Error(`Item thiếu id hoặc kind: ${JSON.stringify(item)}`)
+        const isDuplicateWord = item.kind === 'word' && existingWords.has((item.english ?? '').trim().toLowerCase())
+        if (existingIds.has(item.id) || isDuplicateWord) {
+          skippedCount++
+          continue
+        }
         upsertItem(item)
+        existingIds.add(item.id)
+        if (item.kind === 'word' && item.english) existingWords.add(item.english.trim().toLowerCase())
+        importedCount++
       }
     })
     importMany(items)
-    res.json({ ok: true, count: items.length })
+    res.json({ ok: true, count: importedCount, skipped: skippedCount })
   } catch (err) {
     next(err)
   }

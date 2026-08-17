@@ -122,6 +122,7 @@ export default function Admin() {
   const [etymologyText, setEtymologyText] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const topics = useMemo(() => {
@@ -239,6 +240,34 @@ export default function Admin() {
     deleteItem(id)
     if (editingId === id) resetForm()
     flash('Đã xoá.')
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedIds((prev) => {
+      const allSelected = filtered.length > 0 && filtered.every((i) => prev.has(i.id))
+      if (allSelected) return new Set()
+      return new Set(filtered.map((i) => i.id))
+    })
+  }
+
+  function handleBulkDelete() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Xoá ${selectedIds.size} mục đã chọn? Tiến độ ôn tập của các từ này cũng sẽ không còn ý nghĩa.`)) return
+    for (const id of selectedIds) {
+      deleteItem(id)
+      if (editingId === id) resetForm()
+    }
+    flash(`Đã xoá ${selectedIds.size} mục.`)
+    setSelectedIds(new Set())
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -551,6 +580,25 @@ export default function Admin() {
             </select>
           )}
         </div>
+        <div className="flex items-center justify-between flex-wrap gap-2 text-sm">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id))}
+              onChange={toggleSelectAllFiltered}
+            />
+            Chọn tất cả ({selectedIds.size} đã chọn)
+          </label>
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm"
+              onClick={handleBulkDelete}
+            >
+              🗑️ Xoá {selectedIds.size} mục đã chọn
+            </button>
+          )}
+        </div>
         <div className="grid sm:grid-cols-2 gap-2">
           {filtered.map((item) => (
             <div
@@ -558,6 +606,13 @@ export default function Admin() {
               className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 flex items-center gap-3 bg-white dark:bg-slate-900 cursor-pointer"
               onClick={() => openWordDetail(item)}
             >
+              <input
+                type="checkbox"
+                className="shrink-0"
+                checked={selectedIds.has(item.id)}
+                onClick={(e) => e.stopPropagation()}
+                onChange={() => toggleSelected(item.id)}
+              />
               <WordImage image={item.image} className="w-10 h-10 shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate flex items-center gap-1">
