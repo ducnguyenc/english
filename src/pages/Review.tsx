@@ -2,18 +2,25 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getVisibleItems } from '../lib/content'
 import { ensureItemsTracked, loadProgress, updateItemProgress, bumpStreak } from '../lib/progress'
-import { applyAnswer, applyAnswerMastered, buildQueue } from '../lib/leitner'
+import { applyAnswer, applyAnswerMastered, applyHardnessOnly, buildQueue } from '../lib/leitner'
 import { checkFillAnswer, firstMeaning, isWord, shuffle } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
 import { openWordDetail } from '../lib/wordDetail'
-import type { ContentItem, LeitnerDay, QuizDirection } from '../types'
+import type { ContentItem, LeitnerDay } from '../types'
 import { MASTERED_DAY } from '../types'
+
+// Mỗi kiểu Đầu vào là 1 dạng câu hỏi riêng biệt, với đáp án (Đầu ra) cố định đi kèm — không gộp
+// chung nhiều kiểu vào cùng 1 câu:
+//   showEn  (hiện từ tiếng Anh) -> điền tiếng Việt (dịch Anh -> Việt)
+//   speakEn (nói tiếng Anh)     -> điền tiếng Anh  (nghe & viết lại chính tả)
+//   showVi  (hiện từ tiếng Việt)-> điền tiếng Anh  (dịch Việt -> Anh)
+type InputMode = 'showEn' | 'speakEn' | 'showVi'
+const OUTPUT_LANG_OF: Record<InputMode, 'en' | 'vi'> = { showEn: 'vi', speakEn: 'en', showVi: 'en' }
 
 interface QueueEntry {
   item: ContentItem
-  direction: QuizDirection
-  repeated?: boolean
+  questionMode: InputMode
 }
 
 type ReviewMode = 'practice' | 'test'
@@ -25,14 +32,21 @@ export default function Review() {
   const [mode, setMode] = useState<ReviewMode>('practice')
   const [order, setOrder] = useState<ReviewOrder>('sequential')
 
-  // Đầu ra: yêu cầu điền tiếng Anh và/hoặc tiếng Việt (ít nhất 1 phải được chọn).
-  const [outputEnglish, setOutputEnglish] = useState(true)
-  const [outputVietnamese, setOutputVietnamese] = useState(true)
   // Đầu vào: đề bài hiện những gì — hiện chữ tiếng Anh / đọc tiếng Anh / hiện chữ tiếng Việt.
-  // 3 lựa chọn độc lập, kết hợp tự do (ít nhất 1 phải được chọn).
+  // 3 lựa chọn độc lập, kết hợp tự do (ít nhất 1 phải được chọn). Mỗi lựa chọn được bật là 1 dạng
+  // câu hỏi riêng, đáp án (Đầu ra) tự suy ra theo OUTPUT_LANG_OF — không tự chọn Đầu ra được nữa.
   const [inputShowEnglish, setInputShowEnglish] = useState(true)
   const [inputSpeakEnglish, setInputSpeakEnglish] = useState(true)
   const [inputShowVietnamese, setInputShowVietnamese] = useState(false)
+
+  const enabledModes: InputMode[] = [
+    ...(inputShowEnglish ? (['showEn'] as const) : []),
+    ...(inputSpeakEnglish ? (['speakEn'] as const) : []),
+    ...(inputShowVietnamese ? (['showVi'] as const) : []),
+  ]
+  // Đầu ra hiện tự động theo Đầu vào đang bật — chỉ để xem, không bấm được (đã disabled ở UI).
+  const outputEnglish = enabledModes.some((m) => OUTPUT_LANG_OF[m] === 'en')
+  const outputVietnamese = enabledModes.some((m) => OUTPUT_LANG_OF[m] === 'vi')
 
   const items = getVisibleItems()
   useEffect(() => {
@@ -53,12 +67,12 @@ export default function Review() {
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [results, setResults] = useState<{ up: number; stay: number }>({ up: 0, stay: 0 })
   const [done, setDone] = useState(false)
+  // Khoá ngắn ngay sau khi nộp đáp án: chặn Enter/click thứ 2 bấm quá nhanh (do gõ nhanh, giữ phím)
+  // vô tình chuyển câu ngay khi vừa thấy feedback — không phải auto-advance theo thời gian.
+  const [canAdvance, setCanAdvance] = useState(false)
 
-  function pickOutputDirection(): QuizDirection {
-    // direction 'en-to-vi' = đề bài tiếng Anh, điền tiếng Việt. 'vi-to-en' = đề bài tiếng Việt, điền tiếng Anh.
-    if (outputEnglish && outputVietnamese) return Math.random() < 0.5 ? 'vi-to-en' : 'en-to-vi'
-    if (outputEnglish) return 'vi-to-en'
-    return 'en-to-vi'
+  function pickQuestionMode(): InputMode {
+    return enabledModes[Math.floor(Math.random() * enabledModes.length)]
   }
 
   useEffect(() => {
@@ -69,12 +83,12 @@ export default function Review() {
     const ordered = buildQueue(progresses)
     let entries: QueueEntry[] = ordered.map((p) => {
       const item = tierItems.find((i) => i.id === p.itemId)!
-      return { item, direction: pickOutputDirection() }
+      return { item, questionMode: pickQuestionMode() }
     })
     if (order === 'shuffled') entries = shuffle(entries)
     setQueue(entries)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tierItems.length, day, order, outputEnglish, outputVietnamese])
+  }, [tierItems.length, day, order, inputShowEnglish, inputSpeakEnglish, inputShowVietnamese])
 
   function resetRound() {
     setQueue(null)
@@ -89,19 +103,7 @@ export default function Review() {
     resetRound()
   }
 
-  function toggleOutputEnglish() {
-    if (outputEnglish && !outputVietnamese) return // phải giữ lại ít nhất 1 lựa chọn
-    setOutputEnglish((v) => !v)
-    resetRound()
-  }
-
-  function toggleOutputVietnamese() {
-    if (outputVietnamese && !outputEnglish) return
-    setOutputVietnamese((v) => !v)
-    resetRound()
-  }
-
-  function toggleInput(which: 'showEn' | 'speakEn' | 'showVi') {
+  function toggleInput(which: InputMode) {
     const checkedCount = Number(inputShowEnglish) + Number(inputSpeakEnglish) + Number(inputShowVietnamese)
     let isCurrentlyChecked = inputShowVietnamese
     if (which === 'showEn') isCurrentlyChecked = inputShowEnglish
@@ -110,6 +112,7 @@ export default function Review() {
     if (which === 'showEn') setInputShowEnglish((v) => !v)
     else if (which === 'speakEn') setInputSpeakEnglish((v) => !v)
     else setInputShowVietnamese((v) => !v)
+    resetRound()
   }
 
   const current = queue?.[idx]
@@ -160,31 +163,33 @@ export default function Review() {
   const word = isWord(current.item) ? current.item : null
 
   function submit(correct: boolean) {
-    if (mode === 'test') {
-      const now = Date.now()
-      updateItemProgress(current!.item.id, (p) =>
-        day === MASTERED_DAY ? applyAnswerMastered(p, correct, now) : applyAnswer(p, correct, now),
-      )
-    }
+    const now = Date.now()
+    // Sai ở bất kỳ đâu (Luyện tập hay Kiểm tra) đều tăng mức độ khó. Chỉ chế độ Kiểm tra mới đổi
+    // Day/tầng; Luyện tập chỉ cập nhật wrongCount, không đụng vào tầng đang học.
+    updateItemProgress(current!.item.id, (p) =>
+      mode === 'test'
+        ? day === MASTERED_DAY
+          ? applyAnswerMastered(p, correct, now)
+          : applyAnswer(p, correct, now)
+        : applyHardnessOnly(p, correct, now),
+    )
     setResults((r) => (correct ? { ...r, up: r.up + 1 } : { ...r, stay: r.stay + 1 }))
     setFeedback(correct ? 'correct' : 'wrong')
     // Không tự động chuyển câu — chờ người dùng bấm "Tiếp theo" hoặc Enter lần nữa (xem advance()).
+    // Khoá 400ms đầu tiên để 1 cú Enter/click nộp bài + gõ/bấm quá nhanh ngay sau đó không vô tình
+    // bị tính là "chuyển câu" khi người dùng chưa kịp nhìn thấy đáp án đúng/sai.
+    setCanAdvance(false)
+    setTimeout(() => setCanAdvance(true), 400)
   }
 
   /** Chuyển sang câu tiếp theo — gọi khi người dùng chủ động bấm/Enter sau khi đã thấy feedback đúng/sai. */
   function advance() {
-    const wasCorrect = feedback === 'correct'
+    if (!canAdvance) return
     setFeedback(null)
     setUserInput('')
-    setQueue((q) => {
-      if (!q) return q
-      const rest = q.filter((_, i) => i !== idx)
-      if (wasCorrect) return rest // đúng -> item đã lên tầng, ra khỏi hàng đợi của lượt này
-      // sai -> đưa xuống cuối, gặp lại tối đa 1 lần trong lượt này
-      const already = current!.repeated
-      if (already) return rest
-      return [...rest, { ...current!, repeated: true }]
-    })
+    // Chỉ 1 vòng: đúng hay sai đều ra khỏi hàng đợi của lượt này, không lặp lại lần 2 (khác từ khó
+    // vẫn được ưu tiên xếp đầu ở LƯỢT SAU, xem buildQueue).
+    setQueue((q) => (q ? q.filter((_, i) => i !== idx) : q))
     // idx giữ nguyên: phần tử tại idx vừa bị xoá khỏi queue nên vị trí idx
     // giờ tự động trỏ vào câu tiếp theo (mảng đã dồn lại một chỗ).
   }
@@ -196,8 +201,9 @@ export default function Review() {
     }
     let correct: boolean
     if (word) {
+      // showEn -> đáp án tiếng Việt; speakEn (nghe & viết chính tả) & showVi -> đáp án tiếng Anh.
       correct =
-        current!.direction === 'en-to-vi'
+        current!.questionMode === 'showEn'
           ? checkFillAnswer(userInput, word.vietnamese)
           : checkFillAnswer(userInput, word.english)
     } else {
@@ -276,14 +282,17 @@ export default function Review() {
             Hiện từ tiếng Việt
           </label>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm">
-          <span className="text-slate-400">Đầu ra (yêu cầu điền):</span>
-          <label className="flex items-center gap-1 cursor-pointer select-none">
-            <input type="checkbox" checked={outputEnglish} onChange={toggleOutputEnglish} />
+        <div
+          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm opacity-70"
+          title="Tự động suy ra theo Đầu vào đang chọn — không chỉnh được trực tiếp"
+        >
+          <span className="text-slate-400">Đầu ra (tự động theo Đầu vào):</span>
+          <label className="flex items-center gap-1 select-none cursor-not-allowed">
+            <input type="checkbox" checked={outputEnglish} disabled readOnly />
             Tiếng Anh
           </label>
-          <label className="flex items-center gap-1 cursor-pointer select-none">
-            <input type="checkbox" checked={outputVietnamese} onChange={toggleOutputVietnamese} />
+          <label className="flex items-center gap-1 select-none cursor-not-allowed">
+            <input type="checkbox" checked={outputVietnamese} disabled readOnly />
             Tiếng Việt
           </label>
         </div>
@@ -301,12 +310,7 @@ export default function Review() {
         >
           ℹ️
         </button>
-        <QuestionBody
-          current={current}
-          inputShowEnglish={inputShowEnglish}
-          inputSpeakEnglish={inputSpeakEnglish}
-          inputShowVietnamese={inputShowVietnamese}
-        />
+        <QuestionBody current={current} />
 
         {word && (
           <div className="space-y-3 mt-4">
@@ -317,18 +321,18 @@ export default function Review() {
               onChange={(e) => setUserInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFillSubmit()}
               readOnly={!!feedback}
-              placeholder={current.direction === 'en-to-vi' ? 'Gõ nghĩa tiếng Việt...' : 'Type in English...'}
+              placeholder={current.questionMode === 'showEn' ? 'Gõ nghĩa tiếng Việt...' : 'Type in English...'}
             />
             <button
               className="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm disabled:opacity-50"
               onClick={handleFillSubmit}
-              disabled={!feedback && !userInput.trim()}
+              disabled={feedback ? !canAdvance : !userInput.trim()}
             >
               {feedback ? 'Tiếp theo →' : 'Kiểm tra'}
             </button>
             {feedback === 'wrong' && (
               <p className="text-sm text-red-600">
-                Đáp án đúng: {current.direction === 'en-to-vi' ? word.vietnamese : word.english}
+                Đáp án đúng: {current.questionMode === 'showEn' ? word.vietnamese : word.english}
               </p>
             )}
           </div>
@@ -340,55 +344,53 @@ export default function Review() {
   )
 }
 
-function QuestionBody({
-  current,
-  inputShowEnglish,
-  inputSpeakEnglish,
-  inputShowVietnamese,
-}: {
-  current: QueueEntry
-  inputShowEnglish: boolean
-  inputSpeakEnglish: boolean
-  inputShowVietnamese: boolean
-}) {
+function QuestionBody({ current }: { current: QueueEntry }) {
   const word = isWord(current.item) ? current.item : null
-  // Không phụ thuộc chiều hỏi (direction) — đề bài hiện những gì hoàn toàn theo 3 lựa chọn Đầu vào,
-  // độc lập với Đầu ra (yêu cầu điền tiếng Anh/Việt).
-  const audioOnly = !inputShowEnglish && !inputShowVietnamese // guard đảm bảo lúc này inputSpeakEnglish = true
+  const questionMode = current.questionMode
 
+  // speakEn: nghe & viết lại chính tả. showEn: hiện chữ tiếng Anh nhưng cũng tự đọc luôn.
+  // Cả 2 đều tự phát âm khi câu hỏi đổi.
   useEffect(() => {
-    if (word && inputSpeakEnglish) speak(word.english, 'en-US')
+    if (word && (questionMode === 'speakEn' || questionMode === 'showEn')) speak(word.english, 'en-US')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, inputSpeakEnglish])
+  }, [current])
 
   if (word) {
+    const typeTag = word.type && <div className="text-xs text-slate-400">Loại từ: {word.type}</div>
+
+    if (questionMode === 'speakEn') {
+      return (
+        <div className="space-y-2">
+          <WordImage image={word.image} className="w-16 h-16 mx-auto" />
+          <button onClick={() => speak(word.english, 'en-US')} className="text-4xl">
+            🔊
+          </button>
+          <div className="text-xs text-slate-400">(Nghe & viết lại chính xác từ đã nghe)</div>
+          {typeTag}
+        </div>
+      )
+    }
+    if (questionMode === 'showVi') {
+      return (
+        <div className="space-y-2">
+          <WordImage image={word.image} className="w-16 h-16 mx-auto" />
+          <div className="text-2xl font-bold">{firstMeaning(word.vietnamese)}</div>
+          {typeTag}
+        </div>
+      )
+    }
+    // showEn
     return (
       <div className="space-y-2">
         <WordImage image={word.image} className="w-16 h-16 mx-auto" />
-        {audioOnly && (
-          <>
-            <button onClick={() => speak(word.english, 'en-US')} className="text-4xl">
-              🔊
-            </button>
-            <div className="text-xs text-slate-400">(Nghe & đoán nghĩa)</div>
-          </>
-        )}
-        {inputShowEnglish && (
-          <>
-            <div className="text-2xl font-bold flex items-center justify-center gap-2">
-              {word.english}
-              <button onClick={() => speak(word.english, 'en-US')} className="text-lg">
-                🔊
-              </button>
-            </div>
-            <div className="text-slate-500 dark:text-slate-400">{word.ipa}</div>
-          </>
-        )}
-        {inputShowVietnamese && (
-          <div className={inputShowEnglish ? 'text-base text-slate-500 dark:text-slate-400' : 'text-2xl font-bold'}>
-            {firstMeaning(word.vietnamese)}
-          </div>
-        )}
+        <div className="text-2xl font-bold flex items-center justify-center gap-2">
+          {word.english}
+          <button onClick={() => speak(word.english, 'en-US')} className="text-lg">
+            🔊
+          </button>
+        </div>
+        <div className="text-slate-500 dark:text-slate-400">{word.ipa}</div>
+        {typeTag}
       </div>
     )
   }

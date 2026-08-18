@@ -153,17 +153,35 @@ app.delete('/api/items/:id', (req, res, next) => {
   }
 })
 
-/** Import JSON hàng loạt — bỏ qua item đã tồn tại (trùng id hoặc trùng từ tiếng Anh) */
+const setProgressDayStmt = pool.prepare('UPDATE item_progress SET day = 1 WHERE item_id = ?')
+
+/**
+ * Import JSON hàng loạt.
+ * - Pattern: bỏ qua nếu trùng id (như cũ).
+ * - Word: chỉ coi là trùng (bỏ qua) nếu từ tiếng Anh đó đang ở Day 1-5. Nếu từ đã tồn tại nhưng
+ *   đang ở "Đã thuộc" (Day 6) thì vẫn thêm — đồng thời đưa nó trở lại Day 1 để học lại từ đầu.
+ */
 app.post('/api/items/import', (req, res, next) => {
   const items = req.body
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Body phải là mảng ContentItem[]' })
   try {
-    const existingIds = new Set(pool.prepare('SELECT id FROM content_items').all().map((r) => r.id))
-    const existingWords = new Set(
+    const existingIds = new Set(
       pool
-        .prepare("SELECT english FROM content_items WHERE kind = 'word' AND english IS NOT NULL")
+        .prepare("SELECT id FROM content_items WHERE kind != 'word'")
         .all()
-        .map((r) => r.english.trim().toLowerCase()),
+        .map((r) => r.id),
+    )
+    // day ?? 1 -> khớp đúng quy ước phía client khi item chưa có progress row nào.
+    const wordDayByEnglish = new Map(
+      pool
+        .prepare(
+          `SELECT ci.english AS english, COALESCE(ip.day, 1) AS day
+             FROM content_items ci
+             LEFT JOIN item_progress ip ON ip.item_id = ci.id
+            WHERE ci.kind = 'word' AND ci.english IS NOT NULL`,
+        )
+        .all()
+        .map((r) => [r.english.trim().toLowerCase(), r.day]),
     )
 
     let importedCount = 0
@@ -171,14 +189,27 @@ app.post('/api/items/import', (req, res, next) => {
     const importMany = pool.transaction((list) => {
       for (const item of list) {
         if (!item?.id || !item?.kind) throw new Error(`Item thiếu id hoặc kind: ${JSON.stringify(item)}`)
-        const isDuplicateWord = item.kind === 'word' && existingWords.has((item.english ?? '').trim().toLowerCase())
-        if (existingIds.has(item.id) || isDuplicateWord) {
+
+        if (item.kind !== 'word') {
+          if (existingIds.has(item.id)) {
+            skippedCount++
+            continue
+          }
+          upsertItem(item)
+          existingIds.add(item.id)
+          importedCount++
+          continue
+        }
+
+        const key = (item.english ?? '').trim().toLowerCase()
+        const existingDay = wordDayByEnglish.get(key)
+        if (existingDay !== undefined && existingDay >= 1 && existingDay <= 5) {
           skippedCount++
           continue
         }
         upsertItem(item)
-        existingIds.add(item.id)
-        if (item.kind === 'word' && item.english) existingWords.add(item.english.trim().toLowerCase())
+        if (existingDay !== undefined) setProgressDayStmt.run(item.id) // đã thuộc -> đưa lại Day 1 để học lại
+        wordDayByEnglish.set(key, 1)
         importedCount++
       }
     })

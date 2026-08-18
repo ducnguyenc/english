@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getVisibleItems, subscribeContent } from '../lib/content'
 import { loadProgress, subscribeProgress, updateItemProgress } from '../lib/progress'
-import { applyAnswerAny, isHard } from '../lib/leitner'
+import { applyAnswerAny, hardLevel, isHard } from '../lib/leitner'
 import { checkFillAnswer, isWord } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
@@ -40,7 +40,7 @@ export default function Hard() {
     return (
       <div className="text-center py-16 space-y-3">
         <div className="text-4xl">👍</div>
-        <p className="text-slate-500 dark:text-slate-400">Chưa có từ khó nào (sai ≥ 3 lần) — quá ổn!</p>
+        <p className="text-slate-500 dark:text-slate-400">Chưa có từ khó nào (sai ≥ 1 lần) — quá ổn!</p>
         <Link to="/" className="text-indigo-600 underline">
           Về trang chủ
         </Link>
@@ -80,6 +80,12 @@ export default function Hard() {
           </button>
         </div>
         <div className="text-slate-500 dark:text-slate-400">{current.ipa}</div>
+        {progress.items[current.id] && (
+          <div className="text-xs text-orange-600 dark:text-orange-400">
+            Mức độ khó: {'🔥'.repeat(hardLevel(progress.items[current.id]))} (
+            {hardLevel(progress.items[current.id])}/3)
+          </div>
+        )}
         {current.note && <div className="text-sm text-orange-700 dark:text-orange-300">💡 {current.note}</div>}
         <input
           autoFocus
