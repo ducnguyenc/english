@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { getVisibleItems } from '../lib/content'
 import { ensureItemsTracked, loadProgress, updateItemProgress, bumpStreak } from '../lib/progress'
 import { applyAnswer, applyAnswerMastered, applyHardnessOnly, buildQueue } from '../lib/leitner'
-import { checkFillAnswer, firstMeaning, isWord, shuffle } from '../lib/quiz'
+import { checkFillAnswer, checkIpaAnswer, firstMeaning, isWord, shuffle } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
 import { openWordDetail } from '../lib/wordDetail'
@@ -21,6 +21,8 @@ const OUTPUT_LANG_OF: Record<InputMode, 'en' | 'vi'> = { showEn: 'vi', speakEn: 
 interface QueueEntry {
   item: ContentItem
   questionMode: InputMode
+  // Riêng câu hỏi showEn: nếu true, đáp án là phiên âm IPA thay vì nghĩa tiếng Việt.
+  answerIpa: boolean
 }
 
 type ReviewMode = 'practice' | 'test'
@@ -38,6 +40,9 @@ export default function Review() {
   const [inputShowEnglish, setInputShowEnglish] = useState(true)
   const [inputSpeakEnglish, setInputSpeakEnglish] = useState(true)
   const [inputShowVietnamese, setInputShowVietnamese] = useState(false)
+  // Riêng cho dạng showEn: nếu bật, đáp án là phiên âm IPA thay vì nghĩa tiếng Việt — checkbox này
+  // tự chọn được (không phải suy ra từ Đầu vào như 2 cái Tiếng Anh/Tiếng Việt).
+  const [outputIpa, setOutputIpa] = useState(false)
 
   const enabledModes: InputMode[] = [
     ...(inputShowEnglish ? (['showEn'] as const) : []),
@@ -46,7 +51,8 @@ export default function Review() {
   ]
   // Đầu ra hiện tự động theo Đầu vào đang bật — chỉ để xem, không bấm được (đã disabled ở UI).
   const outputEnglish = enabledModes.some((m) => OUTPUT_LANG_OF[m] === 'en')
-  const outputVietnamese = enabledModes.some((m) => OUTPUT_LANG_OF[m] === 'vi')
+  // showEn bình thường -> tiếng Việt, nhưng nếu bật IPA thì thay bằng IPA (không tính là "tiếng Việt" nữa).
+  const outputVietnamese = enabledModes.some((m) => OUTPUT_LANG_OF[m] === 'vi') && !outputIpa
 
   const items = getVisibleItems()
   useEffect(() => {
@@ -83,12 +89,13 @@ export default function Review() {
     const ordered = buildQueue(progresses)
     let entries: QueueEntry[] = ordered.map((p) => {
       const item = tierItems.find((i) => i.id === p.itemId)!
-      return { item, questionMode: pickQuestionMode() }
+      const questionMode = pickQuestionMode()
+      return { item, questionMode, answerIpa: questionMode === 'showEn' && outputIpa }
     })
     if (order === 'shuffled') entries = shuffle(entries)
     setQueue(entries)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tierItems.length, day, order, inputShowEnglish, inputSpeakEnglish, inputShowVietnamese])
+  }, [tierItems.length, day, order, inputShowEnglish, inputSpeakEnglish, inputShowVietnamese, outputIpa])
 
   function resetRound() {
     setQueue(null)
@@ -112,6 +119,11 @@ export default function Review() {
     if (which === 'showEn') setInputShowEnglish((v) => !v)
     else if (which === 'speakEn') setInputSpeakEnglish((v) => !v)
     else setInputShowVietnamese((v) => !v)
+    resetRound()
+  }
+
+  function toggleOutputIpa() {
+    setOutputIpa((v) => !v)
     resetRound()
   }
 
@@ -201,11 +213,15 @@ export default function Review() {
     }
     let correct: boolean
     if (word) {
-      // showEn -> đáp án tiếng Việt; speakEn (nghe & viết chính tả) & showVi -> đáp án tiếng Anh.
-      correct =
-        current!.questionMode === 'showEn'
-          ? checkFillAnswer(userInput, word.vietnamese)
-          : checkFillAnswer(userInput, word.english)
+      // showEn -> đáp án tiếng Việt (hoặc IPA nếu bật); speakEn (nghe & viết chính tả) & showVi -> đáp án tiếng Anh.
+      if (current!.answerIpa) {
+        correct = checkIpaAnswer(userInput, word.ipa)
+      } else {
+        correct =
+          current!.questionMode === 'showEn'
+            ? checkFillAnswer(userInput, word.vietnamese)
+            : checkFillAnswer(userInput, word.english)
+      }
     } else {
       correct = false
     }
@@ -296,6 +312,15 @@ export default function Review() {
             Tiếng Việt
           </label>
         </div>
+        <div
+          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm"
+          title="Áp dụng cho dạng câu hỏi 'Hiện từ tiếng Anh' — thay đáp án tiếng Việt bằng phiên âm IPA"
+        >
+          <label className="flex items-center gap-1 cursor-pointer select-none">
+            <input type="checkbox" checked={outputIpa} onChange={toggleOutputIpa} />
+            IPA (thay cho tiếng Việt ở dạng "Hiện từ tiếng Anh")
+          </label>
+        </div>
       </div>
       <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
         <div className="h-full bg-indigo-600 transition-all" style={{ width: `${progressPct}%` }} />
@@ -321,7 +346,13 @@ export default function Review() {
               onChange={(e) => setUserInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFillSubmit()}
               readOnly={!!feedback}
-              placeholder={current.questionMode === 'showEn' ? 'Gõ nghĩa tiếng Việt...' : 'Type in English...'}
+              placeholder={
+                current.answerIpa
+                  ? 'Gõ phiên âm IPA...'
+                  : current.questionMode === 'showEn'
+                    ? 'Gõ nghĩa tiếng Việt...'
+                    : 'Type in English...'
+              }
             />
             <button
               className="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm disabled:opacity-50"
@@ -332,7 +363,8 @@ export default function Review() {
             </button>
             {feedback === 'wrong' && (
               <p className="text-sm text-red-600">
-                Đáp án đúng: {current.questionMode === 'showEn' ? word.vietnamese : word.english}
+                Đáp án đúng:{' '}
+                {current.answerIpa ? word.ipa : current.questionMode === 'showEn' ? word.vietnamese : word.english}
               </p>
             )}
           </div>
@@ -379,7 +411,7 @@ function QuestionBody({ current }: { current: QueueEntry }) {
         </div>
       )
     }
-    // showEn
+    // showEn — nếu đáp án là IPA thì ẩn IPA khỏi phần hiển thị (tránh lộ đáp án).
     return (
       <div className="space-y-2">
         <WordImage image={word.image} className="w-16 h-16 mx-auto" />
@@ -389,7 +421,7 @@ function QuestionBody({ current }: { current: QueueEntry }) {
             🔊
           </button>
         </div>
-        <div className="text-slate-500 dark:text-slate-400">{word.ipa}</div>
+        {!current.answerIpa && <div className="text-slate-500 dark:text-slate-400">{word.ipa}</div>}
         {typeTag}
       </div>
     )

@@ -26,6 +26,24 @@ export function checkFillAnswer(userInput: string, correctRaw: string): boolean 
   return options.includes(user)
 }
 
+/**
+ * Chuẩn hoá phiên âm IPA để so sánh — bỏ dấu / bao quanh, dấu trọng âm (ˈ ˌ hoặc ' thường),
+ * dấu chấm ngăn âm tiết (.), chỉ so khớp phần ký tự phiên âm.
+ */
+export function normalizeIpa(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replaceAll('/', '')
+    .replace(/[ˈˌ'’.]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function checkIpaAnswer(userInput: string, correctIpa: string): boolean {
+  return normalizeIpa(userInput) === normalizeIpa(correctIpa)
+}
+
 export function firstMeaning(vietnamese: string): string {
   return vietnamese.split(';')[0].trim()
 }
