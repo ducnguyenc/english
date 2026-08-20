@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getVisibleItems, subscribeContent } from '../lib/content'
 import { loadProgress, subscribeProgress, updateItemProgress } from '../lib/progress'
-import { applyAnswerAny, hardLevel, isHard } from '../lib/leitner'
+import { applyHardnessOnly, hardLevel, isHard } from '../lib/leitner'
 import { checkFillAnswer, isWord } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
@@ -52,7 +52,8 @@ export default function Hard() {
     if (feedback) return
     const correct = checkFillAnswer(input, current.vietnamese)
     setFeedback(correct ? 'correct' : 'wrong')
-    updateItemProgress(current.id, (p) => applyAnswerAny(p, correct, Date.now()))
+    // Chỉ cập nhật mức độ khó — đúng thì bỏ khỏi mục Từ khó nhưng KHÔNG đổi Day/tầng đang học.
+    updateItemProgress(current.id, (p) => applyHardnessOnly(p, correct, Date.now()))
     setTimeout(() => {
       setFeedback(null)
       setInput('')
