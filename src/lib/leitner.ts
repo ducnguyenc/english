@@ -55,6 +55,21 @@ export function applyHardnessOnly(p: ItemProgress, correct: boolean, now: number
 }
 
 /**
+ * Giống applyAnswer/applyAnswerMastered nhưng KHÔNG đụng vào wrongCount (không tính vào "Từ khó").
+ * Dùng cho câu hỏi đáp án IPA — sai chính tả IPA không nên bị coi là "từ khó".
+ */
+export function applyAnswerIgnoreHardness(p: ItemProgress, correct: boolean, now: number): ItemProgress {
+  const history = [...p.history, { at: now, correct }].slice(-50)
+  if (p.day === MASTERED_DAY) {
+    if (correct) return { ...p, lastReviewedAt: now, history }
+    return { ...p, day: 5, correctStreak: 0, lastReviewedAt: now, history }
+  }
+  if (!correct) return { ...p, correctStreak: 0, lastReviewedAt: now, history }
+  const nextDay: LeitnerDay = p.day >= 5 ? MASTERED_DAY : ((p.day + 1) as LeitnerDay)
+  return { ...p, day: nextDay, correctStreak: p.correctStreak + 1, lastReviewedAt: now, history }
+}
+
+/**
  * Sắp thứ tự hàng đợi ôn cho 1 tầng: từ khó 🔥 trước, rồi lastReviewedAt cũ nhất,
  * rồi từ chưa ôn lần nào (null coi là cũ nhất).
  */

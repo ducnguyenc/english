@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getVisibleItems } from '../lib/content'
 import { ensureItemsTracked, loadProgress, updateItemProgress, bumpStreak } from '../lib/progress'
-import { applyAnswer, applyAnswerMastered, applyHardnessOnly, buildQueue } from '../lib/leitner'
+import { applyAnswer, applyAnswerIgnoreHardness, applyAnswerMastered, applyHardnessOnly, buildQueue } from '../lib/leitner'
 import { checkFillAnswer, checkIpaAnswer, firstMeaning, isWord, shuffle } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
@@ -176,15 +176,19 @@ export default function Review() {
 
   function submit(correct: boolean) {
     const now = Date.now()
-    // Sai ở bất kỳ đâu (Luyện tập hay Kiểm tra) đều tăng mức độ khó. Chỉ chế độ Kiểm tra mới đổi
-    // Day/tầng; Luyện tập chỉ cập nhật wrongCount, không đụng vào tầng đang học.
-    updateItemProgress(current!.item.id, (p) =>
-      mode === 'test'
+    // Đáp án IPA -> không tính vào "Từ khó" (sai chính tả IPA không nên bị coi là từ khó).
+    // Ngoài ra: sai ở bất kỳ đâu (Luyện tập hay Kiểm tra) đều tăng mức độ khó. Chỉ chế độ Kiểm tra
+    // mới đổi Day/tầng; Luyện tập chỉ cập nhật wrongCount, không đụng vào tầng đang học.
+    updateItemProgress(current!.item.id, (p) => {
+      if (current!.answerIpa) {
+        return mode === 'test' ? applyAnswerIgnoreHardness(p, correct, now) : p
+      }
+      return mode === 'test'
         ? day === MASTERED_DAY
           ? applyAnswerMastered(p, correct, now)
           : applyAnswer(p, correct, now)
-        : applyHardnessOnly(p, correct, now),
-    )
+        : applyHardnessOnly(p, correct, now)
+    })
     setResults((r) => (correct ? { ...r, up: r.up + 1 } : { ...r, stay: r.stay + 1 }))
     setFeedback(correct ? 'correct' : 'wrong')
     // Không tự động chuyển câu — chờ người dùng bấm "Tiếp theo" hoặc Enter lần nữa (xem advance()).

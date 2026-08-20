@@ -61,6 +61,14 @@ export default function Hard() {
     }, 1000)
   }
 
+  /** Bỏ thẳng từ này ra khỏi mục Từ khó (không cần trả lời đúng) — reset mức độ khó về 0. */
+  function handleDismiss() {
+    if (!confirm(`Bỏ "${current.english}" ra khỏi mục Từ khó?`)) return
+    updateItemProgress(current.id, (p) => ({ ...p, wrongCount: 0 }))
+    setFeedback(null)
+    setInput('')
+  }
+
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <h1 className="text-xl font-bold text-center">🔥 Luyện tập trung từ khó ({hardWords.length})</h1>
@@ -72,6 +80,14 @@ export default function Hard() {
           onClick={() => openWordDetail(current)}
         >
           ℹ️
+        </button>
+        <button
+          type="button"
+          className="absolute top-3 left-3 btn-icon"
+          title="Bỏ khỏi mục Từ khó"
+          onClick={handleDismiss}
+        >
+          ✅
         </button>
         <WordImage image={current.image} className="w-16 h-16 mx-auto" />
         <div className="text-2xl font-bold flex items-center justify-center gap-2">
