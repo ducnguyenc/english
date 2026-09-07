@@ -2,14 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { deleteItem, getVisibleItems, subscribeContent } from '../lib/content'
 import { loadProgress, subscribeProgress } from '../lib/progress'
-import { isWord } from '../lib/quiz'
+import { isPattern, isPhrase, isSentence, isWord } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from '../components/WordImage'
 import DayPicker from '../components/DayPicker'
 import { openWordDetail } from '../lib/wordDetail'
-import type { LeitnerDay, Pattern, Word } from '../types'
+import type { ContentItem, LeitnerDay, Pattern, Phrase, Sentence, Word } from '../types'
 
-type Tab = 'words' | 'patterns' | 'flashcard'
+type Tab = 'words' | 'patterns' | 'sentences' | 'phrases' | 'flashcard'
+
+/** Chữ chính hiển thị cho 1 item bất kỳ (English/formula/phrase/chunk) — dùng ở Flashcard nơi 4 kind trộn lẫn. */
+function itemHeadline(item: ContentItem): string {
+  if (isWord(item)) return item.english
+  if (isPattern(item)) return item.formula
+  if (isSentence(item)) return item.phrase
+  return item.chunk
+}
 
 export default function DayDetail() {
   const { day: dayParam } = useParams<{ day: string }>()
@@ -65,10 +73,12 @@ export default function DayDetail() {
     [items, day], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const words = tierItems.filter(isWord) as Word[]
-  const patterns = tierItems.filter((i) => !isWord(i)) as Pattern[]
+  const patterns = tierItems.filter(isPattern) as Pattern[]
+  const sentences = tierItems.filter(isSentence) as Sentence[]
+  const phrases = tierItems.filter(isPhrase) as Phrase[]
 
   const [flashIdx, setFlashIdx] = useState(0)
-  const flashItems = [...words, ...patterns]
+  const flashItems = [...words, ...patterns, ...sentences, ...phrases]
   const flashCurrent = flashItems[flashIdx % Math.max(flashItems.length, 1)]
 
   return (
@@ -80,8 +90,8 @@ export default function DayDetail() {
         </Link>
       </div>
 
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
-        {(['words', 'patterns', 'flashcard'] as Tab[]).map((t) => (
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 flex-wrap">
+        {(['words', 'patterns', 'sentences', 'phrases', 'flashcard'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -89,7 +99,15 @@ export default function DayDetail() {
               tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'
             }`}
           >
-            {t === 'words' ? `Từ vựng (${words.length})` : t === 'patterns' ? `Cấu trúc (${patterns.length})` : 'Flashcard'}
+            {t === 'words'
+              ? `Từ vựng (${words.length})`
+              : t === 'patterns'
+                ? `Cấu trúc (${patterns.length})`
+                : t === 'sentences'
+                  ? `Câu (${sentences.length})`
+                  : t === 'phrases'
+                    ? `Cụm từ (${phrases.length})`
+                    : 'Flashcard'}
           </button>
         ))}
       </div>
@@ -227,6 +245,138 @@ export default function DayDetail() {
         </div>
       )}
 
+      {tab === 'sentences' && (
+        <div className="space-y-3">
+          {sentences.length > 0 && (
+            <div className="flex items-center justify-between flex-wrap gap-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={sentences.every((s) => selectedIds.has(s.id))}
+                  onChange={() => toggleSelectAll(sentences)}
+                />
+                Chọn tất cả ({selectedIds.size} đã chọn)
+              </label>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm"
+                  onClick={handleBulkDelete}
+                >
+                  🗑️ Xoá {selectedIds.size} mục đã chọn
+                </button>
+              )}
+            </div>
+          )}
+          {sentences.map((s) => (
+            <div
+              key={s.id}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 bg-white dark:bg-slate-900 cursor-pointer"
+              onClick={() => openWordDetail(s)}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  className="shrink-0"
+                  checked={selectedIds.has(s.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleSelected(s.id)}
+                />
+                <WordImage image={s.image} className="w-10 h-10" />
+                <div className="flex-1">
+                  <div className="font-bold text-lg flex items-center gap-2">
+                    {s.phrase}
+                    <button onClick={(e) => { e.stopPropagation(); speak(s.phrase, 'en-US') }}>🔊</button>
+                  </div>
+                  {s.ipa && <div className="text-sm text-slate-500">{s.ipa}</div>}
+                </div>
+                <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                  <DayPicker itemId={s.id} currentDay={progress.items[s.id]?.day ?? 1} />
+                  <Link to={`/admin?edit=${s.id}`} className="btn-icon" title="Sửa">
+                    ✏️
+                  </Link>
+                  <button type="button" className="btn-icon" title="Xoá" onClick={() => handleDelete(s.id)}>
+                    🗑️
+                  </button>
+                </div>
+              </div>
+              <div className="text-slate-500 dark:text-slate-400">{s.meaningVn}</div>
+              {s.subType && <div className="text-xs text-slate-400">{s.subType}</div>}
+              {s.linkedInfo?.reusablePattern && (
+                <div className="text-xs text-indigo-500">🔁 {s.linkedInfo.reusablePattern}</div>
+              )}
+              {s.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {s.note}</div>}
+            </div>
+          ))}
+          {sentences.length === 0 && <div className="text-slate-500 text-sm">Không có câu nào ở tầng này.</div>}
+        </div>
+      )}
+
+      {tab === 'phrases' && (
+        <div className="space-y-3">
+          {phrases.length > 0 && (
+            <div className="flex items-center justify-between flex-wrap gap-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={phrases.every((p) => selectedIds.has(p.id))}
+                  onChange={() => toggleSelectAll(phrases)}
+                />
+                Chọn tất cả ({selectedIds.size} đã chọn)
+              </label>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm"
+                  onClick={handleBulkDelete}
+                >
+                  🗑️ Xoá {selectedIds.size} mục đã chọn
+                </button>
+              )}
+            </div>
+          )}
+          {phrases.map((p) => (
+            <div
+              key={p.id}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 bg-white dark:bg-slate-900 cursor-pointer"
+              onClick={() => openWordDetail(p)}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  className="shrink-0"
+                  checked={selectedIds.has(p.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleSelected(p.id)}
+                />
+                <WordImage image={p.image} className="w-10 h-10" />
+                <div className="flex-1">
+                  <div className="font-bold text-lg flex items-center gap-2">
+                    {p.chunk}
+                    <button onClick={(e) => { e.stopPropagation(); speak(p.chunk, 'en-US') }}>🔊</button>
+                  </div>
+                  {p.ipa && <div className="text-sm text-slate-500">{p.ipa}</div>}
+                </div>
+                <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                  <DayPicker itemId={p.id} currentDay={progress.items[p.id]?.day ?? 1} />
+                  <Link to={`/admin?edit=${p.id}`} className="btn-icon" title="Sửa">
+                    ✏️
+                  </Link>
+                  <button type="button" className="btn-icon" title="Xoá" onClick={() => handleDelete(p.id)}>
+                    🗑️
+                  </button>
+                </div>
+              </div>
+              <div className="text-slate-500 dark:text-slate-400">{p.meaningVn}</div>
+              {p.slotType && <div className="text-xs text-slate-400">{p.slotType}</div>}
+              {p.canPluginInto && <div className="text-xs text-indigo-500">🔁 {p.canPluginInto}</div>}
+              {p.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {p.note}</div>}
+            </div>
+          ))}
+          {phrases.length === 0 && <div className="text-slate-500 text-sm">Không có cụm từ nào ở tầng này.</div>}
+        </div>
+      )}
+
       {tab === 'flashcard' && (
         <div className="max-w-md mx-auto space-y-4">
           {flashItems.length === 0 ? (
@@ -239,7 +389,7 @@ export default function DayDetail() {
               >
                 <WordImage image={flashCurrent.image} className="w-16 h-16 mb-3" />
                 <div className="text-2xl font-bold flex items-center gap-2">
-                  {isWord(flashCurrent) ? flashCurrent.english : flashCurrent.formula}
+                  {itemHeadline(flashCurrent)}
                   {isWord(flashCurrent) && (
                     <button
                       type="button"

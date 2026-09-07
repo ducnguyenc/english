@@ -1,25 +1,28 @@
--- SQLite schema (dùng với better-sqlite3)
+-- Migration 0001: schema khởi tạo ban đầu — content_items (word/pattern), item_progress, app_state.
 
 CREATE TABLE IF NOT EXISTS content_items (
   id            TEXT          NOT NULL PRIMARY KEY,
-  kind          TEXT          NOT NULL CHECK(kind IN ('word', 'pattern')),
+  -- Không CHECK(kind IN (...)) cố định — SQLite không cho ALTER CHECK constraint mà không rebuild
+  -- cả bảng, nên danh sách kind hợp lệ ('word' | 'pattern' | 'sentence' | 'phrase' | ...) được validate
+  -- ở tầng ứng dụng (server/index.js) để thêm kind mới chỉ cần sửa code, không cần migration rebuild bảng.
+  kind          TEXT          NOT NULL,
   topic         TEXT          NULL,
 
   -- Word
   english       TEXT          NULL,
-  ipa           TEXT          NULL,
+  ipa           TEXT          NULL,  -- dùng chung: word / sentence / phrase
   vietnamese    TEXT          NULL,
   word_type     TEXT          NULL,
   example       TEXT          NULL,
   example_vi    TEXT          NULL,
-  note          TEXT          NULL,
+  note          TEXT          NULL,  -- dùng chung
   collocations  TEXT          NULL,  -- JSON string
   etymology     TEXT          NULL,  -- JSON string
 
-  -- Pattern
+  -- Pattern / Sentence (phrase) / Phrase (chunk) — dùng chung cột "formula"
   formula       TEXT          NULL,
-  meaning_vi    TEXT          NULL,
-  examples      TEXT          NULL,  -- JSON string
+  meaning_vi    TEXT          NULL,  -- Pattern.meaningVi / Sentence.meaningVn / Phrase.meaningVn
+  examples      TEXT          NULL,  -- JSON string, chỉ Pattern
 
   -- Dùng chung
   image         TEXT          NULL,  -- emoji, URL, hoặc data URI base64

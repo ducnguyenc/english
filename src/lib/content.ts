@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { ContentItem } from '../types'
+import type { ContentItem, Phrase, Sentence } from '../types'
 
 type Listener = () => void
 const listeners = new Set<Listener>()
@@ -127,12 +127,62 @@ function itemsFromEntry(entry: Record<string, unknown>): ContentItem[] {
   return [synthWord, ...flashcards]
 }
 
+/** Chuyển 1 entry JSON "functional_chunk" (tab Câu) sang Sentence nội bộ. */
+function sentenceFromFunctionalChunk(raw: Record<string, unknown>): Sentence {
+  const li = raw.linked_info as Record<string, unknown> | undefined
+  const rp = li?.response_pair as Record<string, unknown> | undefined
+  return {
+    id: raw.id as string,
+    kind: 'sentence',
+    phrase: raw.phrase as string,
+    ipa: (raw.ipa as string) || undefined,
+    meaningVn: raw.meaning_vn as string,
+    subType: (raw.sub_type as string) || undefined,
+    linkedInfo: li
+      ? {
+          reusablePattern: (li.reusable_pattern as string) || undefined,
+          patternExamples: (li.pattern_examples as string[]) || undefined,
+          responsePair: rp
+            ? {
+                trigger: rp.trigger as string,
+                naturalReply: rp.natural_reply as string,
+                note: (rp.note as string) || undefined,
+              }
+            : undefined,
+          variantsSameMeaning: (li.variants_same_meaning as string[]) || undefined,
+          register: (li.register as string) || undefined,
+          grammarNote: (li.grammar_note as string) || undefined,
+          wordFamilyLink: (li.word_family_link as string | null) ?? undefined,
+          discourseFunction: (li.discourse_function as string) || undefined,
+          sourceLine: (li.source_line as string) || undefined,
+        }
+      : undefined,
+  }
+}
+
+/** Chuyển 1 entry JSON "mini_chunk" (tab Cụm từ) sang Phrase nội bộ. */
+function phraseFromMiniChunk(raw: Record<string, unknown>): Phrase {
+  return {
+    id: raw.id as string,
+    kind: 'phrase',
+    chunk: raw.mini_chunk as string,
+    ipa: (raw.ipa as string) || undefined,
+    meaningVn: raw.meaning_vn as string,
+    slotType: (raw.slot_type as string) || undefined,
+    replaceableWith: (raw.replaceable_with as string[]) || undefined,
+    canPluginInto: (raw.can_plug_into as string) || undefined,
+    exampleReuse: (raw.example_reuse as string[]) || undefined,
+  }
+}
+
 /**
- * Chấp nhận 3 dạng:
+ * Chấp nhận 4 dạng:
  * 1) Mảng ContentItem[] thuần (mỗi phần tử đã có id + kind).
  * 2) Object phân tích từ nguyên dạng { word, root, word_family, ..., flashcards: ContentItem[] }.
  * 3) Mảng nhiều entry dạng (2) — vd. xuất từ nhiều từ vựng cùng lúc — sẽ được gộp (flatten)
  *    thành 1 mảng ContentItem[] duy nhất trước khi import.
+ * 4) Mảng entry "functional_chunk" (tab Câu) hoặc "mini_chunk" (tab Cụm từ) — mỗi phần tử có
+ *    trường "type" thay vì "kind", tự động map sang Sentence/Phrase nội bộ.
  */
 export async function importContentJson(json: string): Promise<{ count: number }> {
   const parsed = JSON.parse(json)
@@ -140,13 +190,18 @@ export async function importContentJson(json: string): Promise<{ count: number }
 
   if (Array.isArray(parsed)) {
     const isFlatContentItems = parsed.every((el) => el && typeof el === 'object' && 'id' in el && 'kind' in el)
+    const isChunkArray = parsed.every(
+      (el) => el && typeof el === 'object' && (el.type === 'functional_chunk' || el.type === 'mini_chunk'),
+    )
     if (isFlatContentItems) {
       items = parsed
+    } else if (isChunkArray) {
+      items = parsed.map((el) => (el.type === 'functional_chunk' ? sentenceFromFunctionalChunk(el) : phraseFromMiniChunk(el)))
     } else {
       const isEntryArray = parsed.every((el) => el && typeof el === 'object' && Array.isArray(el.flashcards))
       if (!isEntryArray) {
         throw new Error(
-          'JSON phải là mảng ContentItem[] (mỗi phần tử có id + kind), hoặc mảng các entry có trường "flashcards"',
+          'JSON phải là mảng ContentItem[] (mỗi phần tử có id + kind), mảng "functional_chunk"/"mini_chunk", hoặc mảng các entry có trường "flashcards"',
         )
       }
       items = parsed.flatMap((entry) => itemsFromEntry(entry))

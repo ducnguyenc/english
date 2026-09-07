@@ -16,9 +16,9 @@ import WordImage from '../components/WordImage'
 import SpeakButton from '../components/SpeakButton'
 import DayPicker from '../components/DayPicker'
 import { openWordDetail } from '../lib/wordDetail'
-import type { ContentItem, Word, Pattern, WordType } from '../types'
+import type { ContentItem, Word, Pattern, Sentence, Phrase, WordType } from '../types'
 
-type Kind = 'word' | 'pattern'
+type Kind = 'word' | 'pattern' | 'sentence' | 'phrase'
 
 function emptyWord(): Word {
   return {
@@ -47,6 +47,61 @@ function emptyPattern(): Pattern {
     note: '',
     topic: '',
   }
+}
+
+function emptySentence(): Sentence {
+  return {
+    id: '',
+    kind: 'sentence',
+    phrase: '',
+    ipa: '',
+    meaningVn: '',
+    subType: '',
+    image: '',
+    note: '',
+    topic: '',
+  }
+}
+
+function emptyPhrase(): Phrase {
+  return {
+    id: '',
+    kind: 'phrase',
+    chunk: '',
+    ipa: '',
+    meaningVn: '',
+    slotType: '',
+    replaceableWith: [],
+    canPluginInto: '',
+    exampleReuse: [],
+    image: '',
+    note: '',
+    topic: '',
+  }
+}
+
+/** Chuyển textarea nhiều dòng <-> string[] cho các field dạng danh sách (mỗi dòng 1 phần tử). */
+function linesToArray(s: string): string[] {
+  return s
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+}
+function arrayToLines(a?: string[]): string {
+  return (a ?? []).join('\n')
+}
+
+/** Chữ chính / phụ hiển thị cho 1 item trong danh sách Admin — 4 kind có field tên khác nhau. */
+function itemHeadline(item: ContentItem): string {
+  if (item.kind === 'word') return item.english
+  if (item.kind === 'pattern') return item.formula
+  if (item.kind === 'sentence') return item.phrase
+  return item.chunk
+}
+function itemSubtitle(item: ContentItem): string {
+  if (item.kind === 'word') return item.vietnamese
+  if (item.kind === 'pattern') return item.meaningVi
+  return item.meaningVn
 }
 
 function slugify(s: string): string {
@@ -96,6 +151,36 @@ const SAMPLE_IMPORT: ContentItem[] = [
     note: 'Present Perfect Continuous',
     topic: 'Grammar',
   },
+  {
+    id: 'sen-sample-sentence',
+    kind: 'sentence',
+    phrase: "I haven't seen you in ages.",
+    ipa: '/haɪ hævnt siːn juː ɪn ˈeɪdʒɪz/',
+    meaningVn: 'đã lâu không gặp',
+    subType: 'collocation / idiom',
+    linkedInfo: {
+      reusablePattern: "haven't + P.P + in + [time period]",
+      patternExamples: ['haven\'t eaten in hours', 'haven\'t talked in weeks'],
+      responsePair: { trigger: "Hey! I haven't seen you in ages.", naturalReply: 'How have you been?' },
+      variantsSameMeaning: ['Long time no see', "It's been a while"],
+      register: 'informal, dùng khi gặp bạn bè lâu ngày không gặp',
+    },
+    image: '👋',
+    topic: 'Greetings',
+  },
+  {
+    id: 'ph-sample-phrase',
+    kind: 'phrase',
+    chunk: 'take it easy',
+    ipa: '/teɪk ɪt ˈiːzi/',
+    meaningVn: 'thư giãn; đừng lo lắng quá',
+    slotType: 'cụm động từ + tân ngữ cố định',
+    replaceableWith: ['calm down', 'relax'],
+    canPluginInto: '[take it easy] + , + clause',
+    exampleReuse: ['Take it easy, we still have time.'],
+    image: '😌',
+    topic: 'Idioms',
+  },
 ]
 
 export default function Admin() {
@@ -117,6 +202,9 @@ export default function Admin() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [wordForm, setWordForm] = useState<Word>(emptyWord())
   const [patternForm, setPatternForm] = useState<Pattern>(emptyPattern())
+  const [sentenceForm, setSentenceForm] = useState<Sentence>(emptySentence())
+  const [phraseForm, setPhraseForm] = useState<Phrase>(emptyPhrase())
+  const [sentenceLinkedInfoText, setSentenceLinkedInfoText] = useState('')
   const [filterTopic, setFilterTopic] = useState<string>('')
   const [importText, setImportText] = useState('')
   const [etymologyText, setEtymologyText] = useState('')
@@ -147,7 +235,10 @@ export default function Admin() {
     setEditingId(null)
     setWordForm(emptyWord())
     setPatternForm(emptyPattern())
+    setSentenceForm(emptySentence())
+    setPhraseForm(emptyPhrase())
     setEtymologyText('')
+    setSentenceLinkedInfoText('')
     setJustSaved(false)
   }
 
@@ -157,8 +248,13 @@ export default function Admin() {
     if (item.kind === 'word') {
       setWordForm(item)
       setEtymologyText(item.etymology ? JSON.stringify(item.etymology, null, 2) : '')
-    } else {
+    } else if (item.kind === 'pattern') {
       setPatternForm(item)
+    } else if (item.kind === 'sentence') {
+      setSentenceForm(item)
+      setSentenceLinkedInfoText(item.linkedInfo ? JSON.stringify(item.linkedInfo, null, 2) : '')
+    } else {
+      setPhraseForm(item)
     }
     setJustSaved(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -233,6 +329,43 @@ export default function Admin() {
     markSaved()
     setEditingId(id)
     setPatternForm((f) => ({ ...f, id }))
+  }
+
+  function saveSentence() {
+    if (!sentenceForm.phrase.trim() || !sentenceForm.meaningVn.trim()) {
+      flash('Cần điền câu và nghĩa tiếng Việt.')
+      return
+    }
+    let linkedInfo = sentenceForm.linkedInfo
+    if (sentenceLinkedInfoText.trim()) {
+      try {
+        linkedInfo = JSON.parse(sentenceLinkedInfoText)
+      } catch (err) {
+        flash('JSON linked_info không hợp lệ: ' + (err as Error).message)
+        return
+      }
+    } else {
+      linkedInfo = undefined
+    }
+    const id = editingId ?? `sen-${slugify(sentenceForm.phrase)}-${Date.now().toString(36)}`
+    upsertItem({ ...sentenceForm, linkedInfo, id, kind: 'sentence' })
+    flash(editingId ? 'Đã cập nhật câu.' : 'Đã thêm câu mới.')
+    markSaved()
+    setEditingId(id)
+    setSentenceForm((f) => ({ ...f, id, linkedInfo }))
+  }
+
+  function savePhrase() {
+    if (!phraseForm.chunk.trim() || !phraseForm.meaningVn.trim()) {
+      flash('Cần điền cụm từ và nghĩa tiếng Việt.')
+      return
+    }
+    const id = editingId ?? `ph-${slugify(phraseForm.chunk)}-${Date.now().toString(36)}`
+    upsertItem({ ...phraseForm, id, kind: 'phrase' })
+    flash(editingId ? 'Đã cập nhật cụm từ.' : 'Đã thêm cụm từ mới.')
+    markSaved()
+    setEditingId(id)
+    setPhraseForm((f) => ({ ...f, id }))
   }
 
   function handleDelete(id: string) {
@@ -347,6 +480,24 @@ export default function Admin() {
           >
             Cấu trúc câu
           </button>
+          <button
+            className={`px-3 py-1.5 rounded-full text-sm ${kind === 'sentence' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}
+            onClick={() => {
+              setKind('sentence')
+              resetForm()
+            }}
+          >
+            Câu
+          </button>
+          <button
+            className={`px-3 py-1.5 rounded-full text-sm ${kind === 'phrase' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}
+            onClick={() => {
+              setKind('phrase')
+              resetForm()
+            }}
+          >
+            Cụm từ
+          </button>
           {editingId && (
             <span className="text-xs text-orange-600 ml-2">Đang sửa: {editingId}</span>
           )}
@@ -459,7 +610,7 @@ export default function Admin() {
               </div>
             </Field>
           </div>
-        ) : (
+        ) : kind === 'pattern' ? (
           <div className="space-y-3">
             <Field label="Công thức *">
               <input
@@ -543,12 +694,170 @@ export default function Admin() {
               />
             </Field>
           </div>
+        ) : kind === 'sentence' ? (
+          <div className="space-y-3">
+            <Field label="Câu / Chunk *">
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  value={sentenceForm.phrase}
+                  onChange={(e) => setSentenceForm((f) => ({ ...f, phrase: e.target.value }))}
+                  placeholder="I haven't seen you in ages."
+                />
+                <button className="btn-icon" onClick={() => speak(sentenceForm.phrase, 'en-US')} type="button">
+                  🔊
+                </button>
+              </div>
+            </Field>
+            <Field label="IPA">
+              <input
+                className="input"
+                value={sentenceForm.ipa ?? ''}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, ipa: e.target.value }))}
+                placeholder="/hævnt siːn juː ɪn ˈeɪdʒɪz/"
+              />
+            </Field>
+            <Field label="Nghĩa tiếng Việt *">
+              <input
+                className="input"
+                value={sentenceForm.meaningVn}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, meaningVn: e.target.value }))}
+                placeholder="đã lâu không gặp"
+              />
+            </Field>
+            <Field label="Sub type">
+              <input
+                className="input"
+                value={sentenceForm.subType ?? ''}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, subType: e.target.value }))}
+                placeholder="collocation / idiom"
+              />
+            </Field>
+            <Field label="Note">
+              <input
+                className="input"
+                value={sentenceForm.note ?? ''}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, note: e.target.value }))}
+              />
+            </Field>
+            <Field label="Topic">
+              <input
+                className="input"
+                value={sentenceForm.topic ?? ''}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, topic: e.target.value }))}
+              />
+            </Field>
+            <Field label="Ảnh (emoji / URL)">
+              <input
+                className="input"
+                value={sentenceForm.image ?? ''}
+                onChange={(e) => setSentenceForm((f) => ({ ...f, image: e.target.value }))}
+                placeholder="👋"
+              />
+            </Field>
+            <Field label="linked_info (dán JSON, tuỳ chọn — reusable_pattern, pattern_examples, response_pair, variants_same_meaning, register, grammar_note, word_family_link, discourse_function, source_line)">
+              <textarea
+                className="input h-40 font-mono text-xs"
+                value={sentenceLinkedInfoText}
+                onChange={(e) => setSentenceLinkedInfoText(e.target.value)}
+                placeholder='{"reusablePattern": "...", "patternExamples": [...], "responsePair": {"trigger": "...", "naturalReply": "..."}}'
+              />
+            </Field>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <Field label="Cụm từ *">
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  value={phraseForm.chunk}
+                  onChange={(e) => setPhraseForm((f) => ({ ...f, chunk: e.target.value }))}
+                  placeholder="take it easy"
+                />
+                <button className="btn-icon" onClick={() => speak(phraseForm.chunk, 'en-US')} type="button">
+                  🔊
+                </button>
+              </div>
+            </Field>
+            <Field label="IPA">
+              <input
+                className="input"
+                value={phraseForm.ipa ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, ipa: e.target.value }))}
+                placeholder="/teɪk ɪt ˈiːzi/"
+              />
+            </Field>
+            <Field label="Nghĩa tiếng Việt *">
+              <input
+                className="input"
+                value={phraseForm.meaningVn}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, meaningVn: e.target.value }))}
+                placeholder="thư giãn; đừng lo lắng quá"
+              />
+            </Field>
+            <Field label="Slot type">
+              <input
+                className="input"
+                value={phraseForm.slotType ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, slotType: e.target.value }))}
+                placeholder="cụm động từ + tân ngữ cố định"
+              />
+            </Field>
+            <Field label="Có thể thay bằng (mỗi dòng 1 cụm)">
+              <textarea
+                className="input h-20"
+                value={arrayToLines(phraseForm.replaceableWith)}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, replaceableWith: linesToArray(e.target.value) }))}
+                placeholder={'calm down\nrelax'}
+              />
+            </Field>
+            <Field label="Lắp vào mẫu câu (can_plug_into)">
+              <input
+                className="input"
+                value={phraseForm.canPluginInto ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, canPluginInto: e.target.value }))}
+                placeholder="[take it easy] + , + clause"
+              />
+            </Field>
+            <Field label="Ví dụ tái sử dụng (mỗi dòng 1 câu)">
+              <textarea
+                className="input h-20"
+                value={arrayToLines(phraseForm.exampleReuse)}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, exampleReuse: linesToArray(e.target.value) }))}
+                placeholder="Take it easy, we still have time."
+              />
+            </Field>
+            <Field label="Note">
+              <input
+                className="input"
+                value={phraseForm.note ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, note: e.target.value }))}
+              />
+            </Field>
+            <Field label="Topic">
+              <input
+                className="input"
+                value={phraseForm.topic ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, topic: e.target.value }))}
+              />
+            </Field>
+            <Field label="Ảnh (emoji / URL)">
+              <input
+                className="input"
+                value={phraseForm.image ?? ''}
+                onChange={(e) => setPhraseForm((f) => ({ ...f, image: e.target.value }))}
+                placeholder="😌"
+              />
+            </Field>
+          </div>
         )}
 
         <div className="flex items-center gap-2">
           <button
             className="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-700 transition"
-            onClick={kind === 'word' ? saveWord : savePattern}
+            onClick={
+              kind === 'word' ? saveWord : kind === 'pattern' ? savePattern : kind === 'sentence' ? saveSentence : savePhrase
+            }
           >
             {editingId ? 'Lưu thay đổi' : 'Thêm mới'}
           </button>
@@ -563,6 +872,54 @@ export default function Admin() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* EXPORT / IMPORT */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-white dark:bg-slate-900">
+        <h2 className="font-semibold">Export / Import</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Import sẽ <strong>thêm mới</strong> các mục trong file, đè lại theo <code>id</code> nếu trùng —
+          không xoá nội dung đang có. Chấp nhận: mảng <code>ContentItem[]</code>; JSON phân tích từ nguyên
+          dạng <code>{'{ word, root, word_family, ..., flashcards: [...] }'}</code> (tự lấy{' '}
+          <code>flashcards</code> để import và gắn từ nguyên vào đúng từ gốc); hoặc mảng các mục{' '}
+          <code>{'{ "type": "functional_chunk", ... }'}</code> (tab Câu) /{' '}
+          <code>{'{ "type": "mini_chunk", ... }'}</code> (tab Cụm từ) — tự map sang đúng dạng.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={handleExport}>
+            ⬇ Export JSON
+          </button>
+          <label className="rounded-lg border px-3 py-1.5 text-sm cursor-pointer">
+            ⬆ Import từ file (thêm mới)
+            <input type="file" accept=".json,application/json" className="hidden" onChange={handleImportFile} />
+          </label>
+          <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={handleDownloadSample}>
+            📄 Tải file mẫu
+          </button>
+          <button
+            className="rounded-lg border border-red-300 text-red-600 px-3 py-1.5 text-sm"
+            onClick={() => {
+              if (confirm('Xoá toàn bộ nội dung tự thêm và quay về dữ liệu mẫu?')) {
+                resetCustomContent()
+                flash('Đã xoá nội dung tự thêm.')
+              }
+            }}
+          >
+            Xoá toàn bộ nội dung tự thêm
+          </button>
+        </div>
+        <details className="text-sm">
+          <summary className="cursor-pointer text-slate-500">Dán JSON để import trực tiếp (thêm mới)</summary>
+          <textarea
+            className="input mt-2 h-32 font-mono text-xs"
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder='[{"id": "...", "kind": "word", ...}]'
+          />
+          <button className="rounded-lg bg-indigo-600 text-white px-3 py-1.5 text-sm mt-2" onClick={handleImport}>
+            Import
+          </button>
+        </details>
       </div>
 
       {/* LIST */}
@@ -616,12 +973,10 @@ export default function Admin() {
               <WordImage image={item.image} className="w-10 h-10 shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate flex items-center gap-1">
-                  {item.kind === 'word' ? item.english : item.formula}
+                  {itemHeadline(item)}
                   {item.kind === 'word' && <SpeakButton text={item.english} className="w-6 h-6 text-base shrink-0" />}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {item.kind === 'word' ? item.vietnamese : item.meaningVi}
-                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{itemSubtitle(item)}</div>
               </div>
               <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
                 <DayPicker itemId={item.id} currentDay={progress.items[item.id]?.day ?? 1} />
@@ -636,52 +991,6 @@ export default function Admin() {
           ))}
           {filtered.length === 0 && <div className="text-slate-500 text-sm">Chưa có mục nào.</div>}
         </div>
-      </div>
-
-      {/* EXPORT / IMPORT */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-white dark:bg-slate-900">
-        <h2 className="font-semibold">Export / Import</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Import sẽ <strong>thêm mới</strong> các mục trong file, đè lại theo <code>id</code> nếu trùng —
-          không xoá nội dung đang có. Chấp nhận cả mảng <code>ContentItem[]</code>, hoặc JSON phân tích
-          từ nguyên dạng <code>{'{ word, root, word_family, ..., flashcards: [...] }'}</code> — tự lấy{' '}
-          <code>flashcards</code> để import và gắn từ nguyên vào đúng từ gốc.
-        </p>
-        <div className="flex gap-2 flex-wrap">
-          <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={handleExport}>
-            ⬇ Export JSON
-          </button>
-          <label className="rounded-lg border px-3 py-1.5 text-sm cursor-pointer">
-            ⬆ Import từ file (thêm mới)
-            <input type="file" accept=".json,application/json" className="hidden" onChange={handleImportFile} />
-          </label>
-          <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={handleDownloadSample}>
-            📄 Tải file mẫu
-          </button>
-          <button
-            className="rounded-lg border border-red-300 text-red-600 px-3 py-1.5 text-sm"
-            onClick={() => {
-              if (confirm('Xoá toàn bộ nội dung tự thêm và quay về dữ liệu mẫu?')) {
-                resetCustomContent()
-                flash('Đã xoá nội dung tự thêm.')
-              }
-            }}
-          >
-            Xoá toàn bộ nội dung tự thêm
-          </button>
-        </div>
-        <details className="text-sm">
-          <summary className="cursor-pointer text-slate-500">Dán JSON để import trực tiếp (thêm mới)</summary>
-          <textarea
-            className="input mt-2 h-32 font-mono text-xs"
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder='[{"id": "...", "kind": "word", ...}]'
-          />
-          <button className="rounded-lg bg-indigo-600 text-white px-3 py-1.5 text-sm mt-2" onClick={handleImport}>
-            Import
-          </button>
-        </details>
       </div>
     </div>
   )

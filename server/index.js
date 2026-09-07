@@ -10,6 +10,11 @@ app.use(express.json({ limit: '5mb' })) // ảnh base64 có thể nặng vài tr
 
 const PORT = process.env.PORT || 4000
 
+// Cột `kind` không có CHECK constraint ở DB (xem migrations/0001_init.sql) — validate ở đây để
+// thêm kind mới chỉ cần sửa code (rowToItem/itemToColumns + danh sách này), không cần migration
+// rebuild bảng như khi còn CHECK constraint.
+const VALID_KINDS = new Set(['word', 'pattern', 'sentence', 'phrase'])
+
 // ---------- helpers ----------
 function parseJsonCol(v) {
   if (v === null || v === undefined) return undefined
@@ -19,47 +24,88 @@ function parseJsonCol(v) {
 /** Ghép row (cột riêng lẻ) lại thành ContentItem */
 function rowToItem(row) {
   const base = { id: row.id, kind: row.kind, topic: row.topic ?? undefined }
-  const fields =
-    row.kind === 'word'
-      ? {
-        english: row.english,
-        ipa: row.ipa,
-        vietnamese: row.vietnamese,
-        type: row.word_type ?? undefined,
-        example: row.example,
-        exampleVi: row.example_vi ?? undefined,
-        image: row.image ?? undefined,
-        note: row.note ?? undefined,
-        collocations: parseJsonCol(row.collocations),
-        etymology: parseJsonCol(row.etymology),
-      }
-      : {
-        formula: row.formula,
-        meaningVi: row.meaning_vi,
-        examples: parseJsonCol(row.examples) ?? [],
-        image: row.image ?? undefined,
-        note: row.note ?? undefined,
-      }
+  let fields
+  if (row.kind === 'word') {
+    fields = {
+      english: row.english,
+      ipa: row.ipa,
+      vietnamese: row.vietnamese,
+      type: row.word_type ?? undefined,
+      example: row.example,
+      exampleVi: row.example_vi ?? undefined,
+      image: row.image ?? undefined,
+      note: row.note ?? undefined,
+      collocations: parseJsonCol(row.collocations),
+      etymology: parseJsonCol(row.etymology),
+    }
+  } else if (row.kind === 'pattern') {
+    fields = {
+      formula: row.formula,
+      meaningVi: row.meaning_vi,
+      examples: parseJsonCol(row.examples) ?? [],
+      image: row.image ?? undefined,
+      note: row.note ?? undefined,
+    }
+  } else if (row.kind === 'sentence') {
+    const extra = parseJsonCol(row.extra) ?? {}
+    fields = {
+      phrase: row.formula,
+      ipa: row.ipa ?? undefined,
+      meaningVn: row.meaning_vi,
+      subType: extra.subType,
+      linkedInfo: extra.linkedInfo,
+      image: row.image ?? undefined,
+      note: row.note ?? undefined,
+    }
+  } else {
+    // phrase
+    const extra = parseJsonCol(row.extra) ?? {}
+    fields = {
+      chunk: row.formula,
+      ipa: row.ipa ?? undefined,
+      meaningVn: row.meaning_vi,
+      slotType: extra.slotType,
+      replaceableWith: extra.replaceableWith,
+      canPluginInto: extra.canPluginInto,
+      exampleReuse: extra.exampleReuse,
+      image: row.image ?? undefined,
+      note: row.note ?? undefined,
+    }
+  }
   const item = { ...base, ...fields }
   for (const key of Object.keys(item)) if (item[key] === undefined) delete item[key]
   return item
 }
 
-/** Tách ContentItem thành các cột SQL tương ứng (word/pattern) */
+/** Tách ContentItem thành các cột SQL tương ứng (word/pattern/sentence/phrase) */
 function itemToColumns(item) {
   const isWord = item.kind === 'word'
+  const isPattern = item.kind === 'pattern'
+  const isSentence = item.kind === 'sentence'
+  const isPhrase = item.kind === 'phrase'
+  const extra = isSentence
+    ? { subType: item.subType, linkedInfo: item.linkedInfo }
+    : isPhrase
+      ? {
+          slotType: item.slotType,
+          replaceableWith: item.replaceableWith,
+          canPluginInto: item.canPluginInto,
+          exampleReuse: item.exampleReuse,
+        }
+      : null
   return {
     english: isWord ? (item.english ?? null) : null,
-    ipa: isWord ? (item.ipa ?? null) : null,
+    ipa: isWord || isSentence || isPhrase ? (item.ipa ?? null) : null,
     vietnamese: isWord ? (item.vietnamese ?? null) : null,
     word_type: isWord ? (item.type ?? null) : null,
     example: isWord ? (item.example ?? null) : null,
     example_vi: isWord ? (item.exampleVi ?? null) : null,
     collocations: isWord ? JSON.stringify(item.collocations ?? []) : null,
     etymology: isWord && item.etymology ? JSON.stringify(item.etymology) : null,
-    formula: isWord ? null : (item.formula ?? null),
-    meaning_vi: isWord ? null : (item.meaningVi ?? null),
-    examples: isWord ? null : JSON.stringify(item.examples ?? []),
+    formula: isPattern ? (item.formula ?? null) : isSentence ? (item.phrase ?? null) : isPhrase ? (item.chunk ?? null) : null,
+    meaning_vi: isPattern ? (item.meaningVi ?? null) : isSentence || isPhrase ? (item.meaningVn ?? null) : null,
+    examples: isPattern ? JSON.stringify(item.examples ?? []) : null,
+    extra: extra ? JSON.stringify(extra) : null,
     image: item.image ?? null,
     note: item.note ?? null,
   }
@@ -69,9 +115,9 @@ function itemToColumns(item) {
 const UPSERT_ITEM_SQL = `
   INSERT OR REPLACE INTO content_items
     (id, kind, topic, english, ipa, vietnamese, word_type, example, example_vi, note,
-     collocations, etymology, formula, meaning_vi, examples, image)
+     collocations, etymology, formula, meaning_vi, examples, extra, image)
   VALUES (@id, @kind, @topic, @english, @ipa, @vietnamese, @word_type, @example, @example_vi, @note,
-          @collocations, @etymology, @formula, @meaning_vi, @examples, @image)
+          @collocations, @etymology, @formula, @meaning_vi, @examples, @extra, @image)
 `
 
 const upsertItemStmt = pool.prepare(UPSERT_ITEM_SQL)
@@ -97,6 +143,7 @@ function upsertItem(item) {
     formula: c.formula,
     meaning_vi: c.meaning_vi,
     examples: c.examples,
+    extra: c.extra,
     image: c.image,
   })
   insertProgressStmt.run({ item_id: item.id })
@@ -137,6 +184,7 @@ app.post('/api/items', (req, res, next) => {
   try {
     const item = req.body
     if (!item?.id || !item?.kind) return res.status(400).json({ error: 'Thiếu id hoặc kind' })
+    if (!VALID_KINDS.has(item.kind)) return res.status(400).json({ error: `kind không hợp lệ: ${item.kind}` })
     upsertItem(item)
     res.json({ ok: true })
   } catch (err) {
@@ -189,6 +237,7 @@ app.post('/api/items/import', (req, res, next) => {
     const importMany = pool.transaction((list) => {
       for (const item of list) {
         if (!item?.id || !item?.kind) throw new Error(`Item thiếu id hoặc kind: ${JSON.stringify(item)}`)
+        if (!VALID_KINDS.has(item.kind)) throw new Error(`kind không hợp lệ: ${item.kind}`)
 
         if (item.kind !== 'word') {
           if (existingIds.has(item.id)) {

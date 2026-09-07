@@ -102,9 +102,11 @@ dữ liệu mẫu từ `server/seed.js`).
 
 ```
 server/
-├── db.js                 # kết nối pool MySQL (đọc .env)
-├── schema.sql             # DDL 3 bảng: content_items, item_progress, app_state
-├── migrate.js             # chạy schema.sql lên DB (npm run db:migrate)
+├── db.js                 # kết nối SQLite (better-sqlite3)
+├── migrations/            # từng file .sql là 1 migration, đánh số tăng dần (0001_..., 0002_...) —
+│                          # KHÔNG sửa file cũ đã chạy trên DB thật, luôn thêm file mới khi đổi schema
+├── migrate.js             # chạy các migration chưa áp dụng lên DB (npm run db:migrate), tự theo dõi
+│                          # migration nào đã chạy qua bảng schema_migrations
 ├── seed.js                # dữ liệu mẫu, dùng để seed khi content_items rỗng
 └── index.js               # Express REST API (/api/items, /api/progress)
 

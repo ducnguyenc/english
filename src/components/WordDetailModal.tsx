@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { closeWordDetail, getWordDetail, subscribeWordDetail } from '../lib/wordDetail'
 import { loadProgress, subscribeProgress } from '../lib/progress'
-import { isWord } from '../lib/quiz'
+import { isPattern, isPhrase, isSentence, isWord } from '../lib/quiz'
 import { speak } from '../lib/speech'
 import WordImage from './WordImage'
-import { MASTERED_DAY, type WordEtymology } from '../types'
+import { MASTERED_DAY, type Phrase, type WordEtymology } from '../types'
 
 export default function WordDetailModal() {
   const [, setTick] = useState(0)
@@ -37,14 +37,26 @@ export default function WordDetailModal() {
             <WordImage image={item.image} className="w-14 h-14" />
             <div>
               <div className="text-xl font-bold flex items-center gap-2">
-                {isWord(item) ? item.english : item.formula}
-                {isWord(item) && (
-                  <button type="button" onClick={() => speak(item.english, 'en-US')}>
+                {isWord(item)
+                  ? item.english
+                  : isPattern(item)
+                    ? item.formula
+                    : isSentence(item)
+                      ? item.phrase
+                      : item.chunk}
+                {(isWord(item) || isSentence(item) || isPhrase(item)) && (
+                  <button
+                    type="button"
+                    onClick={() => speak(isWord(item) ? item.english : isSentence(item) ? item.phrase : (item as Phrase).chunk, 'en-US')}
+                  >
                     🔊
                   </button>
                 )}
               </div>
               {isWord(item) && item.ipa && <div className="text-sm text-slate-500">{item.ipa}</div>}
+              {(isSentence(item) || isPhrase(item)) && item.ipa && (
+                <div className="text-sm text-slate-500">{item.ipa}</div>
+              )}
             </div>
           </div>
           <button type="button" className="btn-icon" onClick={closeWordDetail} title="Đóng">
@@ -80,7 +92,7 @@ export default function WordDetailModal() {
             {item.topic && <div className="text-xs text-slate-400">Chủ đề: {item.topic}</div>}
             {item.etymology && <EtymologySection etymology={item.etymology} />}
           </>
-        ) : (
+        ) : isPattern(item) ? (
           <>
             <div className="text-slate-500 dark:text-slate-400">{item.meaningVi}</div>
             <ul className="space-y-1 text-sm">
@@ -94,6 +106,43 @@ export default function WordDetailModal() {
                 </li>
               ))}
             </ul>
+            {item.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {item.note}</div>}
+            {item.topic && <div className="text-xs text-slate-400">Chủ đề: {item.topic}</div>}
+          </>
+        ) : isSentence(item) ? (
+          <>
+            <div className="text-slate-500 dark:text-slate-400">{item.meaningVn}</div>
+            {item.subType && <div className="text-xs text-slate-400">{item.subType}</div>}
+            {item.linkedInfo && <SentenceLinkedInfoSection info={item.linkedInfo} />}
+            {item.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {item.note}</div>}
+            {item.topic && <div className="text-xs text-slate-400">Chủ đề: {item.topic}</div>}
+          </>
+        ) : (
+          <>
+            <div className="text-slate-500 dark:text-slate-400">{item.meaningVn}</div>
+            {item.slotType && <div className="text-xs text-slate-400">{item.slotType}</div>}
+            {item.canPluginInto && (
+              <div className="text-xs text-slate-500">
+                <span className="font-medium">Lắp vào:</span> {item.canPluginInto}
+              </div>
+            )}
+            {item.replaceableWith && item.replaceableWith.length > 0 && (
+              <div className="text-xs text-slate-500">
+                Có thể thay bằng: {item.replaceableWith.join(', ')}
+              </div>
+            )}
+            {item.exampleReuse && item.exampleReuse.length > 0 && (
+              <ul className="space-y-1 text-sm">
+                {item.exampleReuse.map((ex, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <button type="button" onClick={() => speak(ex, 'en-US')}>
+                      🔊
+                    </button>
+                    <span className="italic">"{ex}"</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {item.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {item.note}</div>}
             {item.topic && <div className="text-xs text-slate-400">Chủ đề: {item.topic}</div>}
           </>
@@ -142,6 +191,43 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
   return <td className={`px-2 py-1.5 align-top ${className}`}>{children}</td>
+}
+
+function SentenceLinkedInfoSection({ info }: { info: NonNullable<import('../types').Sentence['linkedInfo']> }) {
+  return (
+    <div className="border-t border-slate-200 dark:border-slate-800 pt-3 space-y-2 text-sm">
+      {info.reusablePattern && (
+        <div>
+          <span className="font-medium">Mẫu tái sử dụng:</span> {info.reusablePattern}
+        </div>
+      )}
+      {info.patternExamples && info.patternExamples.length > 0 && (
+        <ul className="text-xs space-y-1 list-disc list-inside text-slate-500">
+          {info.patternExamples.map((ex, i) => (
+            <li key={i}>{ex}</li>
+          ))}
+        </ul>
+      )}
+      {info.responsePair && (
+        <div className="text-xs rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5 space-y-1">
+          <div>
+            <span className="font-medium">A:</span> {info.responsePair.trigger}
+          </div>
+          <div>
+            <span className="font-medium">B:</span> {info.responsePair.naturalReply}
+          </div>
+          {info.responsePair.note && <div className="italic text-amber-600 dark:text-amber-400">💡 {info.responsePair.note}</div>}
+        </div>
+      )}
+      {info.variantsSameMeaning && info.variantsSameMeaning.length > 0 && (
+        <div className="text-xs text-slate-500">Cách nói tương đương: {info.variantsSameMeaning.join(', ')}</div>
+      )}
+      {info.register && <div className="text-xs text-slate-400">Văn phong: {info.register}</div>}
+      {info.grammarNote && <div className="text-xs text-slate-400">Ngữ pháp: {info.grammarNote}</div>}
+      {info.wordFamilyLink && <div className="text-xs text-slate-400">Gia đình từ: {info.wordFamilyLink}</div>}
+      {info.discourseFunction && <div className="text-xs text-slate-400">Vai trò trong hội thoại: {info.discourseFunction}</div>}
+    </div>
+  )
 }
 
 function EtymologySection({ etymology }: { etymology: WordEtymology }) {

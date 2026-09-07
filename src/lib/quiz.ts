@@ -1,7 +1,19 @@
-import type { ContentItem, LeitnerDay, QuizDirection, Word } from '../types'
+import type { ContentItem, LeitnerDay, Pattern, Phrase, QuizDirection, Sentence, Word } from '../types'
 
 export function isWord(item: ContentItem): item is Word {
   return item.kind === 'word'
+}
+
+export function isPattern(item: ContentItem): item is Pattern {
+  return item.kind === 'pattern'
+}
+
+export function isSentence(item: ContentItem): item is Sentence {
+  return item.kind === 'sentence'
+}
+
+export function isPhrase(item: ContentItem): item is Phrase {
+  return item.kind === 'phrase'
 }
 
 /** Ngày 1: EN->VI. Ngày 2: VI->EN. Ngày 3-5 & Đã thuộc: random mỗi câu. */

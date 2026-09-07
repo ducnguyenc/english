@@ -86,7 +86,57 @@ export interface Pattern {
   topic?: string
 }
 
-export type ContentItem = Word | Pattern
+/** Cặp hỏi-đáp tự nhiên đi kèm 1 câu/chunk chức năng. */
+export interface ResponsePair {
+  trigger: string
+  naturalReply: string
+  note?: string
+}
+
+/** Thông tin mở rộng gắn với 1 "câu" (functional chunk) — công thức tái sử dụng, biến thể, ngữ cảnh... */
+export interface SentenceLinkedInfo {
+  reusablePattern?: string
+  patternExamples?: string[]
+  responsePair?: ResponsePair
+  variantsSameMeaning?: string[]
+  register?: string
+  grammarNote?: string
+  wordFamilyLink?: string | null
+  discourseFunction?: string
+  sourceLine?: string
+}
+
+/** Tab "Câu" — 1 câu/chunk chức năng dùng trong hội thoại thực tế, import từ JSON dạng "functional_chunk". */
+export interface Sentence {
+  id: string
+  kind: 'sentence'
+  phrase: string
+  ipa?: string
+  meaningVn: string
+  subType?: string
+  linkedInfo?: SentenceLinkedInfo
+  image?: string
+  note?: string
+  topic?: string
+}
+
+/** Tab "Cụm từ" — 1 cụm từ nhỏ có thể lắp vào nhiều mẫu câu khác nhau, import từ JSON dạng "mini_chunk". */
+export interface Phrase {
+  id: string
+  kind: 'phrase'
+  chunk: string
+  ipa?: string
+  meaningVn: string
+  slotType?: string
+  replaceableWith?: string[]
+  canPluginInto?: string
+  exampleReuse?: string[]
+  image?: string
+  note?: string
+  topic?: string
+}
+
+export type ContentItem = Word | Pattern | Sentence | Phrase
 
 /** Kho nội dung: mỗi ngày chỉ còn dùng để nhóm mẫu ban đầu trong seed, KHÔNG dùng để quyết định tầng ôn. */
 export interface ContentBundle {
