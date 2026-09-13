@@ -375,7 +375,34 @@ export default function Review() {
         )}
 
         {feedback === 'correct' && <p className="text-emerald-600 font-medium">✅ Chính xác!</p>}
+
+        {/* Dù đúng hay sai đều hiện thông tin chi tiết ngay tại đây (không mở modal) — bấm "Tiếp
+            theo →" ở trên (hoặc Enter) một lần nữa mới sang từ kế tiếp. */}
+        {feedback && word && <InlineWordDetail word={word} />}
       </div>
+    </div>
+  )
+}
+
+/** Thông tin chi tiết hiện ngay dưới feedback đúng/sai, không cần mở modal riêng. */
+function InlineWordDetail({ word }: Readonly<{ word: import('../types').Word }>) {
+  return (
+    <div className="text-left border-t border-slate-200 dark:border-slate-800 pt-3 mt-3 space-y-1.5">
+      <div className="font-medium">{word.vietnamese}</div>
+      {word.type && <div className="text-xs text-slate-400">Loại từ: {word.type}</div>}
+      {word.example && (
+        <div className="text-sm text-slate-600 dark:text-slate-300 italic flex items-center gap-2">
+          "{word.example}"
+          <button type="button" onClick={() => speak(word.example, 'en-US')}>
+            🔊
+          </button>
+        </div>
+      )}
+      {word.exampleVi && <div className="text-sm text-slate-400">{word.exampleVi}</div>}
+      {word.note && <div className="text-xs text-amber-600 dark:text-amber-400">💡 {word.note}</div>}
+      {word.collocations && word.collocations.length > 0 && (
+        <div className="text-xs text-slate-500">Collocations: {word.collocations.join(', ')}</div>
+      )}
     </div>
   )
 }
