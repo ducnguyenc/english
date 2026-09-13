@@ -131,8 +131,10 @@ function itemsFromEntry(entry: Record<string, unknown>): ContentItem[] {
 function sentenceFromFunctionalChunk(raw: Record<string, unknown>): Sentence {
   const li = raw.linked_info as Record<string, unknown> | undefined
   const rp = li?.response_pair as Record<string, unknown> | undefined
+  // "id" không bắt buộc trong JSON functional_chunk — tự sinh từ "phrase" nếu thiếu, để người dùng
+  // không phải tự nghĩ id (server dùng id dạng TEXT làm khoá chính, không tự tăng được).
   return {
-    id: raw.id as string,
+    id: (raw.id as string) || `s-${slugify(raw.phrase as string)}`,
     kind: 'sentence',
     phrase: raw.phrase as string,
     ipa: (raw.ipa as string) || undefined,
@@ -162,8 +164,10 @@ function sentenceFromFunctionalChunk(raw: Record<string, unknown>): Sentence {
 
 /** Chuyển 1 entry JSON "mini_chunk" (tab Cụm từ) sang Phrase nội bộ. */
 function phraseFromMiniChunk(raw: Record<string, unknown>): Phrase {
+  // "id" không bắt buộc trong JSON mini_chunk — tự sinh từ "mini_chunk" nếu thiếu (xem lý do ở
+  // sentenceFromFunctionalChunk phía trên).
   return {
-    id: raw.id as string,
+    id: (raw.id as string) || `p-${slugify(raw.mini_chunk as string)}`,
     kind: 'phrase',
     chunk: raw.mini_chunk as string,
     ipa: (raw.ipa as string) || undefined,

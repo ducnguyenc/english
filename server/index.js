@@ -300,6 +300,14 @@ app.get('/api/progress', (_req, res, next) => {
 app.post('/api/progress/:itemId', (req, res, next) => {
   try {
     const { itemId } = req.params
+    // itemId có thể đến từ hàng đợi quiz đang mở sẵn trên trình duyệt (React state), tham chiếu 1 item
+    // đã bị xoá khỏi content_items (import lỗi, reset nội dung, ...) — FK constraint sẽ chặn insert.
+    // Trả 404 rõ ràng thay vì để lỗi FK rơi xuống error handler chung (tránh spam log, và để client
+    // (progress.ts) log ra chính xác item nào thay vì 1 lỗi SQLite chung chung không rõ nguyên nhân).
+    const exists = pool.prepare('SELECT 1 FROM content_items WHERE id = ?').get(itemId)
+    if (!exists) {
+      return res.status(404).json({ error: `content_items không có item id="${itemId}" — hàng đợi/queue có thể đang cũ, hãy tải lại trang.` })
+    }
     const { day, correctStreak, wrongCount, lastReviewedAt, history } = req.body
     pool.prepare(
       `INSERT OR REPLACE INTO item_progress (item_id, day, correct_streak, wrong_count, last_reviewed_at, history)
