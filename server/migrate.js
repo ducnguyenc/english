@@ -29,7 +29,18 @@ function runFile(file) {
   const rawSql = readFileSync(join(migrationsDir, file), 'utf-8')
   const statements = splitStatements(rawSql)
   const run = pool.transaction(() => {
-    for (const stmt of statements) pool.exec(stmt)
+    for (const stmt of statements) {
+      try {
+        pool.exec(stmt)
+      } catch (err) {
+        // SQLite không hỗ trợ "ALTER TABLE ... ADD COLUMN IF NOT EXISTS" — một số DB có thể đã có
+        // sẵn cột này (migration cũ từng bị bootstrap đánh dấu "đã áp dụng" mà không thực sự chạy,
+        // xem 0003_fix_missing_extra_column.sql). Bỏ qua lỗi trùng cột để migration chạy an toàn
+        // trên cả DB đã có cột lẫn DB thiếu cột; các lỗi khác vẫn ném ra bình thường.
+        const isDuplicateColumn = /duplicate column name/i.test(err.message)
+        if (!isDuplicateColumn) throw err
+      }
+    }
     pool.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(file)
   })
   run()
