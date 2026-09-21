@@ -389,6 +389,7 @@ function InlineWordDetail({ word }: Readonly<{ word: import('../types').Word }>)
   return (
     <div className="text-left border-t border-slate-200 dark:border-slate-800 pt-3 mt-3 space-y-1.5">
       <div className="font-medium">{word.vietnamese}</div>
+      {word.ipa && <div className="text-sm text-slate-500 dark:text-slate-400">{word.ipa}</div>}
       {word.type && <div className="text-xs text-slate-400">Loại từ: {word.type}</div>}
       {word.example && (
         <div className="text-sm text-slate-600 dark:text-slate-300 italic flex items-center gap-2">
