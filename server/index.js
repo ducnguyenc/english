@@ -192,6 +192,25 @@ function ensureSeeded() {
   console.log(`Seeded ${SEED_ITEMS.length} mục mẫu vào content_items.`)
 }
 
+// ---------- TTS ----------
+// Proxy Google Translate TTS: gọi thẳng từ trình duyệt bị Google trả 404 (vì có header Referer) và
+// Chrome chặn (ERR_BLOCKED_BY_ORB). Server gọi không kèm Referer nên lấy được audio.
+app.get('/api/tts', async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').slice(0, 200)
+    const tl = req.query.tl === 'vi' ? 'vi' : 'en'
+    if (!q.trim()) return res.status(400).json({ error: 'Thiếu q' })
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${tl}&q=${encodeURIComponent(q)}`
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (!r.ok) return res.status(502).json({ error: `Google TTS lỗi ${r.status}` })
+    res.set('Content-Type', r.headers.get('content-type') || 'audio/mpeg')
+    res.set('Cache-Control', 'public, max-age=604800')
+    res.send(Buffer.from(await r.arrayBuffer()))
+  } catch (err) {
+    next(err)
+  }
+})
+
 // ---------- content_items ----------
 app.get('/api/items', (_req, res, next) => {
   try {

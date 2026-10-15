@@ -2,9 +2,45 @@
 // GC có thể dọn nó giữa chừng khiến utterance bị câm lặng (không kêu, không lỗi).
 // Giữ ở biến module-level để utterance sống hết vòng đời phát âm.
 let activeUtterance: SpeechSynthesisUtterance | null = null
+const TTS_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+let activeAudio: HTMLAudioElement | null = null
+
+/**
+ * Phát âm: ưu tiên giọng Google Translate TTS (tự nhiên hơn), lỗi (mạng, bị chặn, autoplay...) thì
+ * fallback sang Web Speech API như cũ.
+ */
+export function speak(text: string, lang: 'en-US' | 'vi-VN' = 'en-US'): boolean {
+  if (typeof window === 'undefined' || !text.trim()) return false
+  // Google TTS giới hạn ~200 ký tự mỗi request — câu dài thì dùng Web Speech luôn.
+  if (text.length > 200 || typeof Audio === 'undefined') return speakWebSpeech(text, lang)
+
+  stopAll()
+  // Đi qua proxy server (/api/tts) — gọi thẳng Google từ trình duyệt bị chặn vì header Referer.
+  const url = `${TTS_BASE_URL}/api/tts?tl=${lang.slice(0, 2)}&q=${encodeURIComponent(text)}`
+  const audio = new Audio(url)
+  activeAudio = audio
+  let fellBack = false
+  const fallback = () => {
+    if (fellBack || activeAudio !== audio) return // đã fallback, hoặc đã có lần bấm loa mới hơn
+    fellBack = true
+    activeAudio = null
+    speakWebSpeech(text, lang)
+  }
+  audio.addEventListener('error', fallback)
+  audio.play().catch(fallback)
+  return true
+}
+
+function stopAll() {
+  if (activeAudio) {
+    activeAudio.pause()
+    activeAudio = null
+  }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+}
 
 /** Phát âm bằng Web Speech API — không cần file audio. */
-export function speak(text: string, lang: 'en-US' | 'vi-VN' = 'en-US'): boolean {
+function speakWebSpeech(text: string, lang: 'en-US' | 'vi-VN'): boolean {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false
   try {
     const utter = new SpeechSynthesisUtterance(text)
