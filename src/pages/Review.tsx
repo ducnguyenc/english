@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getVisibleItems } from '../lib/content'
 import { ensureItemsTracked, loadProgress, updateItemProgress, bumpStreak } from '../lib/progress'
@@ -76,6 +76,15 @@ export default function Review() {
   // Khoá ngắn ngay sau khi nộp đáp án: chặn Enter/click thứ 2 bấm quá nhanh (do gõ nhanh, giữ phím)
   // vô tình chuyển câu ngay khi vừa thấy feedback — không phải auto-advance theo thời gian.
   const [canAdvance, setCanAdvance] = useState(false)
+  const detailRef = useRef<HTMLDivElement>(null)
+
+  // Mỗi lần hiện đáp án/chi tiết (feedback), tự cuộn tới đúng vị trí đó — để dù đã cuộn xuống xem
+  // chi tiết câu trước, bấm "Tiếp theo" xong vẫn thấy chi tiết câu mới ở cùng vị trí trên màn hình.
+  useEffect(() => {
+    if (feedback) {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [feedback])
 
   function pickQuestionMode(): InputMode {
     return enabledModes[Math.floor(Math.random() * enabledModes.length)]
@@ -378,7 +387,11 @@ export default function Review() {
 
         {/* Dù đúng hay sai đều hiện thông tin chi tiết ngay tại đây (không mở modal) — bấm "Tiếp
             theo →" ở trên (hoặc Enter) một lần nữa mới sang từ kế tiếp. */}
-        {feedback && word && <InlineWordDetail word={word} />}
+        {feedback && word && (
+          <div ref={detailRef}>
+            <InlineWordDetail word={word} />
+          </div>
+        )}
       </div>
     </div>
   )

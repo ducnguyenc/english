@@ -111,13 +111,35 @@ function itemToColumns(item) {
   }
 }
 
-// SQLite dùng INSERT OR REPLACE thay vì ON DUPLICATE KEY UPDATE
+// "ON CONFLICT(id) DO UPDATE" (không dùng INSERT OR REPLACE): OR REPLACE coi mọi vi phạm ràng buộc
+// UNIQUE (kể cả unique theo nội dung ở migration 0005) như xung đột "id" — tức sẽ tự xoá âm thầm bản
+// ghi cũ trùng nội dung rồi insert bản mới, không hề báo lỗi. Dùng ON CONFLICT(id) để việc re-import
+// cùng id vẫn update như cũ, còn trùng nội dung (english/formula) với id khác sẽ ném lỗi SQLITE_CONSTRAINT
+// thật để tầng trên (index.js) bắt và trả về lỗi rõ ràng cho client.
 const UPSERT_ITEM_SQL = `
-  INSERT OR REPLACE INTO content_items
+  INSERT INTO content_items
     (id, kind, topic, english, ipa, vietnamese, word_type, example, example_vi, note,
      collocations, etymology, formula, meaning_vi, examples, extra, image)
   VALUES (@id, @kind, @topic, @english, @ipa, @vietnamese, @word_type, @example, @example_vi, @note,
           @collocations, @etymology, @formula, @meaning_vi, @examples, @extra, @image)
+  ON CONFLICT(id) DO UPDATE SET
+    kind = excluded.kind,
+    topic = excluded.topic,
+    english = excluded.english,
+    ipa = excluded.ipa,
+    vietnamese = excluded.vietnamese,
+    word_type = excluded.word_type,
+    example = excluded.example,
+    example_vi = excluded.example_vi,
+    note = excluded.note,
+    collocations = excluded.collocations,
+    etymology = excluded.etymology,
+    formula = excluded.formula,
+    meaning_vi = excluded.meaning_vi,
+    examples = excluded.examples,
+    extra = excluded.extra,
+    image = excluded.image,
+    updated_at = datetime('now')
 `
 
 const upsertItemStmt = pool.prepare(UPSERT_ITEM_SQL)
@@ -366,6 +388,11 @@ app.post('/api/progress/reset', (_req, res, next) => {
 
 app.use((err, _req, res, _next) => {
   console.error(err)
+  // Vi phạm unique index nội dung (migration 0005) hoặc ràng buộc khác của SQLite -> 409 kèm message
+  // dễ hiểu, thay vì 500 chung.
+  if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || /UNIQUE constraint failed/i.test(err.message)) {
+    return res.status(409).json({ error: `Trùng nội dung với item đã có trong DB: ${err.message}` })
+  }
   res.status(500).json({ error: err.message })
 })
 
